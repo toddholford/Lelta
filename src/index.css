@@ -1,0 +1,127 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ---- River Slate (light) — the default :root palette ---- */
+:root {
+  color-scheme: light;
+  --background: oklch(0.965 0.006 210);
+  --foreground: oklch(0.26 0.02 225);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.26 0.02 225);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.26 0.02 225);
+  --primary: oklch(0.58 0.11 192);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.93 0.01 210);
+  --secondary-foreground: oklch(0.26 0.02 225);
+  --muted: oklch(0.93 0.01 210);
+  --muted-foreground: oklch(0.5 0.02 220);
+  --accent: oklch(0.92 0.035 195);
+  --accent-foreground: oklch(0.36 0.08 195);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.99 0 0);
+  --positive: oklch(0.55 0.11 192);
+  --border: oklch(0.88 0.012 210);
+  --input: oklch(0.88 0.012 210);
+  --ring: oklch(0.6 0.1 192);
+  --radius: 0.75rem;
+}
+
+/* ---- Midnight Teal (dark) — near-black + river teal (default theme) ---- */
+.theme-teal-dark {
+  color-scheme: dark;
+  --background: oklch(0.14 0.008 195);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.185 0.01 195);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.185 0.01 195);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.78 0.13 180);
+  --primary-foreground: oklch(0.16 0.03 180);
+  --secondary: oklch(0.245 0.01 195);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.245 0.01 195);
+  --muted-foreground: oklch(0.71 0.02 195);
+  --accent: oklch(0.3 0.045 182);
+  --accent-foreground: oklch(0.92 0.06 182);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
+  --positive: oklch(0.78 0.13 180);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.78 0.13 180);
+}
+
+/* ---- Deep Ocean (dark) — navy blue + river teal ---- */
+.theme-ocean {
+  color-scheme: dark;
+  --background: oklch(0.17 0.035 248);
+  --foreground: oklch(0.95 0.012 235);
+  --card: oklch(0.225 0.04 248);
+  --card-foreground: oklch(0.95 0.012 235);
+  --popover: oklch(0.225 0.04 248);
+  --popover-foreground: oklch(0.95 0.012 235);
+  --primary: oklch(0.79 0.13 182);
+  --primary-foreground: oklch(0.18 0.04 248);
+  --secondary: oklch(0.28 0.045 248);
+  --secondary-foreground: oklch(0.95 0.012 235);
+  --muted: oklch(0.28 0.045 248);
+  --muted-foreground: oklch(0.73 0.03 235);
+  --accent: oklch(0.34 0.06 215);
+  --accent-foreground: oklch(0.9 0.07 195);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
+  --positive: oklch(0.79 0.13 182);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.79 0.13 182);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-positive: var(--positive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    overscroll-behavior-y: none;
+  }
+}
+
+/* Safe-area helpers for installed PWA (notch / home indicator) */
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
