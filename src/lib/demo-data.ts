@@ -17,16 +17,14 @@ const HOUSEHOLD_ID = 'demo-household'
 
 export const demoLookups: Lookups = {
   types: [
-    { id: 1, name: 'debt' },
-    { id: 2, name: 'recurring' },
+    { id: 1, name: 'payments' },
     { id: 3, name: 'spending' },
   ],
   categories: [
     { id: 1, transaction_type_id: 1, name: 'credit card' },
     { id: 2, transaction_type_id: 1, name: 'loan' },
-    { id: 3, transaction_type_id: 2, name: 'debts' },
-    { id: 4, transaction_type_id: 2, name: 'utils' },
-    { id: 5, transaction_type_id: 2, name: 'subs' },
+    { id: 4, transaction_type_id: 1, name: 'utils' },
+    { id: 5, transaction_type_id: 1, name: 'subs' },
     { id: 6, transaction_type_id: 3, name: 'groceries' },
     { id: 7, transaction_type_id: 3, name: 'shopping' },
     { id: 8, transaction_type_id: 3, name: 'dining' },
@@ -94,10 +92,10 @@ function txn(partial: Omit<TransactionInput, 'transaction_frequency_id' | 'due_d
 }
 
 export const demoTemplates: RecurringTemplate[] = [
-  { id: 'tpl-rent', household_id: HOUSEHOLD_ID, account_id: 'acct-regions', transaction_type_id: 2, transaction_category_id: 3, transaction_frequency_id: 2, source_name: 'Mortgage', amount_cents: 145000, due_day: 1, start_date: '2024-01-01', end_date: null, active: true },
-  { id: 'tpl-electric', household_id: HOUSEHOLD_ID, account_id: 'acct-regions', transaction_type_id: 2, transaction_category_id: 4, transaction_frequency_id: 2, source_name: 'Ameren Electric', amount_cents: 14250, due_day: 15, start_date: '2024-01-01', end_date: null, active: true },
-  { id: 'tpl-water', household_id: HOUSEHOLD_ID, account_id: 'acct-regions', transaction_type_id: 2, transaction_category_id: 4, transaction_frequency_id: 2, source_name: 'City Water', amount_cents: 5830, due_day: 20, start_date: '2024-01-01', end_date: null, active: true },
-  { id: 'tpl-netflix', household_id: HOUSEHOLD_ID, account_id: 'acct-regions', transaction_type_id: 2, transaction_category_id: 5, transaction_frequency_id: 2, source_name: 'Netflix', amount_cents: 1799, due_day: 8, start_date: '2024-01-01', end_date: null, active: true },
+  { id: 'tpl-rent', household_id: HOUSEHOLD_ID, account_id: 'acct-regions', transaction_type_id: 1, transaction_category_id: 2, transaction_frequency_id: 2, source_name: 'Mortgage', amount_cents: 145000, due_day: 1, start_date: '2024-01-01', end_date: null, active: true },
+  { id: 'tpl-electric', household_id: HOUSEHOLD_ID, account_id: 'acct-regions', transaction_type_id: 1, transaction_category_id: 4, transaction_frequency_id: 2, source_name: 'Ameren Electric', amount_cents: 14250, due_day: 15, start_date: '2024-01-01', end_date: null, active: true },
+  { id: 'tpl-water', household_id: HOUSEHOLD_ID, account_id: 'acct-regions', transaction_type_id: 1, transaction_category_id: 4, transaction_frequency_id: 2, source_name: 'City Water', amount_cents: 5830, due_day: 20, start_date: '2024-01-01', end_date: null, active: true },
+  { id: 'tpl-netflix', household_id: HOUSEHOLD_ID, account_id: 'acct-regions', transaction_type_id: 1, transaction_category_id: 5, transaction_frequency_id: 2, source_name: 'Netflix', amount_cents: 1799, due_day: 8, start_date: '2024-01-01', end_date: null, active: true },
   { id: 'tpl-chase', household_id: HOUSEHOLD_ID, account_id: 'acct-regions', transaction_type_id: 1, transaction_category_id: 1, transaction_frequency_id: 2, source_name: 'Chase Sapphire', amount_cents: 42000, due_day: 27, start_date: '2024-01-01', end_date: null, active: true },
 ]
 
@@ -107,12 +105,12 @@ export const demoTransactions: Transaction[] = [
   txn({ account_id: 'acct-firstmid', transaction_type_id: 3, transaction_category_id: 8, source_name: 'Chipotle', txn_date: iso(2), amount_cents: 2412 }),
   txn({ account_id: 'acct-firstmid', transaction_type_id: 3, transaction_category_id: 10, source_name: 'AMC Theatres', txn_date: iso(4), amount_cents: 3250 }),
   txn({ account_id: 'acct-firstmid', transaction_type_id: 3, transaction_category_id: 7, source_name: 'Target', txn_date: iso(6), amount_cents: 6518 }),
-  txn({ account_id: 'acct-regions', transaction_type_id: 2, transaction_category_id: 4, source_name: 'Ameren Electric', txn_date: iso(3), due_date: iso(-4), amount_cents: 14250, transaction_frequency_id: 2 }),
-  txn({ account_id: 'acct-regions', transaction_type_id: 2, transaction_category_id: 5, source_name: 'Netflix', txn_date: iso(5), amount_cents: 1799, transaction_frequency_id: 2 }),
+  txn({ account_id: 'acct-regions', transaction_type_id: 1, transaction_category_id: 4, source_name: 'Ameren Electric', txn_date: iso(3), due_date: iso(-4), amount_cents: 14250, transaction_frequency_id: 2 }),
+  txn({ account_id: 'acct-regions', transaction_type_id: 1, transaction_category_id: 5, source_name: 'Netflix', txn_date: iso(5), amount_cents: 1799, transaction_frequency_id: 2 }),
   txn({ account_id: 'acct-regions', transaction_type_id: 1, transaction_category_id: 1, source_name: 'Chase Sapphire', txn_date: iso(8), due_date: iso(-10), amount_cents: 42000, transaction_frequency_id: 2 }),
   txn({ account_id: 'acct-firstmid', transaction_type_id: 3, transaction_category_id: 9, source_name: 'AutoZone', txn_date: iso(9), amount_cents: 4599 }),
   txn({ account_id: 'acct-firstmid', transaction_type_id: 3, transaction_category_id: 6, source_name: 'Aldi', txn_date: iso(10), amount_cents: 6221 }),
-  txn({ account_id: 'acct-regions', transaction_type_id: 2, transaction_category_id: 4, source_name: 'City Water', txn_date: iso(12), amount_cents: 5830, transaction_frequency_id: 2 }),
+  txn({ account_id: 'acct-regions', transaction_type_id: 1, transaction_category_id: 4, source_name: 'City Water', txn_date: iso(12), amount_cents: 5830, transaction_frequency_id: 2 }),
   // Credit-card spending (Chase Visa) — shows under the ledger's Credit view.
   txn({ account_id: 'acct-chase-visa', transaction_type_id: 3, transaction_category_id: 8, source_name: 'Olive Garden', txn_date: iso(2), amount_cents: 5240 }),
   txn({ account_id: 'acct-chase-visa', transaction_type_id: 3, transaction_category_id: 7, source_name: 'Amazon', txn_date: iso(5), amount_cents: 3199 }),

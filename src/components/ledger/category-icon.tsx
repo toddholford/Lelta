@@ -3,7 +3,6 @@ import {
   CreditCard,
   Landmark,
   PartyPopper,
-  Receipt,
   Repeat,
   ShoppingBag,
   ShoppingCart,
@@ -17,7 +16,6 @@ import { cn } from '@/lib/utils'
 const iconByCategory: Record<string, LucideIcon> = {
   'credit card': CreditCard,
   loan: Landmark,
-  debts: Receipt,
   utils: Zap,
   subs: Repeat,
   groceries: ShoppingCart,

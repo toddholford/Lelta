@@ -31,7 +31,7 @@ Return ONLY a JSON array; each element:
   "source_name": string,        // merchant / payee, cleaned up
   "date": "YYYY-MM-DD",
   "amount_cents": integer,      // positive integer cents, outflows only
-  "suggested_category": string | null  // one of: credit card, loan, debts, utils, subs, groceries, shopping, dining, maintenance, fun
+  "suggested_category": string | null  // one of: credit card, loan, utils, subs, groceries, shopping, dining, maintenance, fun
 }
 Skip deposits, interest, and running-balance lines. No prose, no markdown fences.`
 

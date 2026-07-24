@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { MonthSelector } from '@/components/ledger/month-selector'
@@ -7,12 +7,11 @@ import { useAccounts } from '@/hooks/use-accounts'
 import { useLookups } from '@/hooks/use-lookups'
 import { useTransactions } from '@/hooks/use-transactions'
 import { useMonthBalances, useSetMonthBalance } from '@/hooks/use-month-balances'
+import { useMonth } from '@/hooks/use-month'
 import { formatCents } from '@/lib/format'
 
 export function OverviewPage() {
-  const now = new Date()
-  const [year, setYear] = useState(now.getFullYear())
-  const [month, setMonth] = useState(now.getMonth())
+  const { year, month, setMonth } = useMonth()
 
   const accounts = useAccounts()
   const lookups = useLookups()
@@ -79,14 +78,7 @@ export function OverviewPage() {
         <h1 className="text-lg font-semibold">Overview</h1>
       </div>
 
-      <MonthSelector
-        year={year}
-        month={month}
-        onChange={(y, m) => {
-          setYear(y)
-          setMonth(m)
-        }}
-      />
+      <MonthSelector year={year} month={month} onChange={setMonth} />
 
       {loadError && (
         <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">

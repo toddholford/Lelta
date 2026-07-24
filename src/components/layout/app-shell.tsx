@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router'
 import { BookOpenText, Wallet, FileUp, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { isDemoMode } from '@/lib/supabase'
+import { MonthProvider } from '@/hooks/use-month'
 
 const tabs = [
   { to: '/', label: 'Ledger', icon: BookOpenText },
@@ -15,6 +16,7 @@ const tabs = [
  */
 export function AppShell() {
   return (
+    <MonthProvider>
     <div className="mx-auto flex min-h-dvh w-full max-w-5xl flex-col">
       {isDemoMode && (
         <div className="bg-amber-500/15 px-4 py-1.5 text-center text-xs font-medium text-amber-700 dark:text-amber-400">
@@ -75,5 +77,6 @@ export function AppShell() {
         </div>
       </nav>
     </div>
+    </MonthProvider>
   )
 }

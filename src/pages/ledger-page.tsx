@@ -12,6 +12,7 @@ import { TransactionForm } from '@/components/ledger/transaction-form'
 import { TransactionSheet } from '@/components/ledger/transaction-sheet'
 import { useAccounts } from '@/hooks/use-accounts'
 import { useLookups } from '@/hooks/use-lookups'
+import { useMonth } from '@/hooks/use-month'
 import {
   useCreateTransaction,
   useDeleteTransaction,
@@ -21,9 +22,7 @@ import {
 import type { Transaction, TransactionInput } from '@/lib/types'
 
 export function LedgerPage() {
-  const now = new Date()
-  const [year, setYear] = useState(now.getFullYear())
-  const [month, setMonth] = useState(now.getMonth())
+  const { year, month, setMonth } = useMonth()
   const [view, setView] = useState<LedgerView>('cash')
   const [accountId, setAccountId] = useState<string | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -137,14 +136,7 @@ export function LedgerPage() {
         {/* Pinned selectors */}
         <div className="sticky top-0 z-30 space-y-3 bg-background/95 px-4 pb-3 pt-3 backdrop-blur md:static md:px-0 md:pt-0">
           <LedgerViewToggle value={view} onChange={handleViewChange} />
-          <MonthSelector
-            year={year}
-            month={month}
-            onChange={(y, m) => {
-              setYear(y)
-              setMonth(m)
-            }}
-          />
+          <MonthSelector year={year} month={month} onChange={setMonth} />
           <AccountSwitcher
             accounts={viewAccounts}
             selectedId={accountId}

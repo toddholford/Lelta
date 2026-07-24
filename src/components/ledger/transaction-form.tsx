@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { formatCents, parseDollarsToCents, todayISO } from '@/lib/format'
+import { cn } from '@/lib/utils'
 import type { Account, Lookups, Transaction, TransactionInput } from '@/lib/types'
 
 interface TransactionFormProps {
@@ -55,6 +56,22 @@ export function TransactionForm({
       setCategoryId(categoryOptions[0]?.id ?? '')
     }
   }, [categoryOptions, categoryId])
+
+  // Frequency + due date only apply to Payments (bills, loans, subs).
+  const paymentsTypeId = useMemo(
+    () => lookups.types.find((t) => t.name === 'payments')?.id,
+    [lookups.types],
+  )
+  const isPayments = typeId === paymentsTypeId
+
+  // Clear frequency/due when switching away from Payments so stale values
+  // aren't submitted on a spending entry.
+  useEffect(() => {
+    if (!isPayments) {
+      setFrequencyId('')
+      setDueDate('')
+    }
+  }, [isPayments])
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -110,8 +127,8 @@ export function TransactionForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="grid gap-1.5">
+      <div className={cn('grid gap-3', isPayments ? 'grid-cols-2' : 'grid-cols-1')}>
+        <div className="grid min-w-0 gap-1.5">
           <Label htmlFor="txn-account">Account</Label>
           <Select
             id="txn-account"
@@ -123,21 +140,23 @@ export function TransactionForm({
             ))}
           </Select>
         </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="txn-frequency">Frequency</Label>
-          <Select
-            id="txn-frequency"
-            value={frequencyId}
-            onChange={(e) =>
-              setFrequencyId(e.target.value === '' ? '' : Number(e.target.value))
-            }
-          >
-            <option value="">one-off</option>
-            {lookups.frequencies.map((f) => (
-              <option key={f.id} value={f.id}>{f.name}</option>
-            ))}
-          </Select>
-        </div>
+        {isPayments && (
+          <div className="grid min-w-0 gap-1.5">
+            <Label htmlFor="txn-frequency">Frequency</Label>
+            <Select
+              id="txn-frequency"
+              value={frequencyId}
+              onChange={(e) =>
+                setFrequencyId(e.target.value === '' ? '' : Number(e.target.value))
+              }
+            >
+              <option value="">one-off</option>
+              {lookups.frequencies.map((f) => (
+                <option key={f.id} value={f.id}>{f.name}</option>
+              ))}
+            </Select>
+          </div>
+        )}
       </div>
 
       <div className="grid gap-1.5">
@@ -151,26 +170,30 @@ export function TransactionForm({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="grid gap-1.5">
+      <div className={cn('grid gap-3', isPayments ? 'grid-cols-2' : 'grid-cols-1')}>
+        <div className="grid min-w-0 gap-1.5">
           <Label htmlFor="txn-date">Date</Label>
           <Input
             id="txn-date"
             type="date"
             required
+            className="min-w-0 px-2 text-sm"
             value={date}
             onChange={(e) => setDate(e.target.value)}
           />
         </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="txn-due">Due date</Label>
-          <Input
-            id="txn-due"
-            type="date"
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
-          />
-        </div>
+        {isPayments && (
+          <div className="grid min-w-0 gap-1.5">
+            <Label htmlFor="txn-due">Due date</Label>
+            <Input
+              id="txn-due"
+              type="date"
+              className="min-w-0 px-2 text-sm"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+            />
+          </div>
+        )}
       </div>
 
       <div className="grid gap-1.5">

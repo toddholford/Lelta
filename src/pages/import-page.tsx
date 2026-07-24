@@ -8,11 +8,23 @@ import { supabase } from '@/lib/supabase'
 import { useAccounts } from '@/hooks/use-accounts'
 import { useProfile } from '@/hooks/use-auth'
 
-const BANK_FORMATS = [
-  { value: 'regions_pdf', label: 'Regions (PDF)' },
-  { value: 'capitalone_pdf', label: 'Capital One (PDF)' },
-  { value: 'firstmid_csv', label: 'FirstMid (CSV)' },
-]
+// Each account maps to a known statement format so the user only has to pick
+// the account — the parser format is resolved in the background. Institutions
+// without an explicit entry fall back to a slug derived from the institution
+// name + the uploaded file's extension.
+const FORMAT_BY_INSTITUTION: Record<string, string> = {
+  Regions: 'regions_pdf',
+  'Capital One': 'capitalone_pdf',
+  FirstMid: 'firstmid_csv',
+}
+
+function bankFormatForAccount(institution: string, file: File | null): string {
+  const known = FORMAT_BY_INSTITUTION[institution]
+  if (known) return known
+  const ext = file?.name.split('.').pop()?.toLowerCase()
+  const slug = institution.toLowerCase().replace(/[^a-z0-9]+/g, '') || 'bank'
+  return `${slug}_${ext === 'csv' ? 'csv' : 'pdf'}`
+}
 
 /**
  * Statement upload: file → Supabase Storage → statement_import row.
@@ -23,7 +35,6 @@ export function ImportPage() {
   const accounts = useAccounts()
   const { data: profile } = useProfile()
   const [accountId, setAccountId] = useState('')
-  const [bankFormat, setBankFormat] = useState(BANK_FORMATS[0].value)
   const [file, setFile] = useState<File | null>(null)
   const [status, setStatus] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle')
   const [message, setMessage] = useState('')
@@ -40,7 +51,7 @@ export function ImportPage() {
       setMessage('Demo mode — connect Supabase to upload statements.')
       return
     }
-    const account = accountId || accounts.data?.[0]?.id
+    const account = accounts.data?.find((a) => a.id === (accountId || accounts.data?.[0]?.id))
     if (!account) {
       setStatus('error')
       setMessage('Add an account in Settings first.')
@@ -58,9 +69,9 @@ export function ImportPage() {
     }
     const { error: insertError } = await supabase.from('statement_import').insert({
       household_id: profile.household_id,
-      account_id: account,
+      account_id: account.id,
       file_path: path,
-      bank_format: bankFormat,
+      bank_format: bankFormatForAccount(account.institution, file),
       uploaded_by: profile.id,
     })
     if (insertError) {
@@ -91,19 +102,6 @@ export function ImportPage() {
             >
               {(accounts.data ?? []).map((a) => (
                 <option key={a.id} value={a.id}>{a.name}</option>
-              ))}
-            </Select>
-          </div>
-
-          <div className="grid gap-1.5">
-            <Label htmlFor="import-format">Bank format</Label>
-            <Select
-              id="import-format"
-              value={bankFormat}
-              onChange={(e) => setBankFormat(e.target.value)}
-            >
-              {BANK_FORMATS.map((f) => (
-                <option key={f.value} value={f.value}>{f.label}</option>
               ))}
             </Select>
           </div>
