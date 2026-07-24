@@ -1,11 +1,11 @@
 import { NavLink, Outlet } from 'react-router'
-import { BookOpenText, TrendingUp, FileUp, Settings } from 'lucide-react'
+import { BookOpenText, Wallet, FileUp, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { isDemoMode } from '@/lib/supabase'
 
 const tabs = [
   { to: '/', label: 'Ledger', icon: BookOpenText },
-  { to: '/plan', label: 'Plan', icon: TrendingUp },
+  { to: '/overview', label: 'Overview', icon: Wallet },
   { to: '/import', label: 'Import', icon: FileUp },
   { to: '/settings', label: 'Settings', icon: Settings },
 ]

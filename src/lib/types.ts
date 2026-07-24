@@ -31,6 +31,16 @@ export interface Account {
   is_hub: boolean
 }
 
+export interface AccountMonthBalance {
+  id: string
+  household_id: string
+  account_id: string
+  year: number
+  /** 1-based month (1 = January) as stored in the DB. */
+  month: number
+  starting_cents: number
+}
+
 export interface RecurringTemplate {
   id: string
   household_id: string

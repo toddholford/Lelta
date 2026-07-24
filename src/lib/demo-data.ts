@@ -2,7 +2,14 @@
 // mode). Lets the UI be explored before the backend exists. Mirrors the seed
 // data in supabase/migrations.
 
-import type { Account, Lookups, RecurringTemplate, Transaction, TransactionInput } from './types'
+import type {
+  Account,
+  AccountMonthBalance,
+  Lookups,
+  RecurringTemplate,
+  Transaction,
+  TransactionInput,
+} from './types'
 import { todayISO } from './format'
 import { uuid } from './id'
 
@@ -46,6 +53,21 @@ export const demoAccounts: Account[] = [
   { id: 'acct-firstmid', household_id: HOUSEHOLD_ID, name: 'FirstMid Spending', institution: 'FirstMid', account_type_id: 2, is_hub: false },
   { id: 'acct-hysa', household_id: HOUSEHOLD_ID, name: 'High-Yield Savings', institution: 'HYSA', account_type_id: 3, is_hub: false },
   { id: 'acct-chase-visa', household_id: HOUSEHOLD_ID, name: 'Chase Sapphire', institution: 'Chase Visa', account_type_id: 5, is_hub: false },
+]
+
+// Per-account starting balance for a given month. In demo mode this is the
+// source for the Overview page's "remaining" math (starting - spent). Seeded
+// for the current month so the page isn't empty on first load. `month` is
+// 1-based to mirror the DB column.
+const _now = new Date()
+const CUR_YEAR = _now.getFullYear()
+const CUR_MONTH = _now.getMonth() + 1
+
+export const demoMonthBalances: AccountMonthBalance[] = [
+  { id: uuid(), household_id: HOUSEHOLD_ID, account_id: 'acct-capone', year: CUR_YEAR, month: CUR_MONTH, starting_cents: 340000 },
+  { id: uuid(), household_id: HOUSEHOLD_ID, account_id: 'acct-regions', year: CUR_YEAR, month: CUR_MONTH, starting_cents: 120000 },
+  { id: uuid(), household_id: HOUSEHOLD_ID, account_id: 'acct-firstmid', year: CUR_YEAR, month: CUR_MONTH, starting_cents: 90000 },
+  { id: uuid(), household_id: HOUSEHOLD_ID, account_id: 'acct-hysa', year: CUR_YEAR, month: CUR_MONTH, starting_cents: 1500000 },
 ]
 
 function iso(daysAgo: number): string {

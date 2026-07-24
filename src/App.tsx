@@ -2,7 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AppShell } from '@/components/layout/app-shell'
 import { LedgerPage } from '@/pages/ledger-page'
-import { PlanPage } from '@/pages/plan-page'
+import { OverviewPage } from '@/pages/overview-page'
 import { ImportPage } from '@/pages/import-page'
 import { SettingsPage } from '@/pages/settings-page'
 import { AuthPage } from '@/pages/auth-page'
@@ -27,7 +27,7 @@ function Gate() {
     <Routes>
       <Route element={<AppShell />}>
         <Route index element={<LedgerPage />} />
-        <Route path="plan" element={<PlanPage />} />
+        <Route path="overview" element={<OverviewPage />} />
         <Route path="import" element={<ImportPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
