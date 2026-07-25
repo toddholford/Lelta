@@ -134,7 +134,8 @@ export function LedgerPage() {
 
       <div>
         {/* Pinned selectors */}
-        <div className="sticky top-0 z-30 space-y-3 bg-background/95 px-4 pb-3 pt-3 backdrop-blur md:static md:px-0 md:pt-0">
+        {/* Sticks just below the mobile brand bar (h-14 + top safe inset); static on desktop. */}
+        <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top,0px))] z-30 space-y-3 bg-background/95 px-4 pb-3 pt-3 backdrop-blur md:static md:top-0 md:px-0 md:pt-0">
           <LedgerViewToggle value={view} onChange={handleViewChange} />
           <MonthSelector year={year} month={month} onChange={setMonth} />
           <AccountSwitcher

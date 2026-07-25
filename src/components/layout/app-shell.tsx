@@ -11,8 +11,28 @@ const tabs = [
   { to: '/settings', label: 'Settings', icon: Settings },
 ]
 
+/** Logo mark, optionally followed by the dual-colour wordmark. */
+function Brand({ wordmark = true }: { wordmark?: boolean }) {
+  return (
+    <span className="flex items-center gap-2">
+      <img
+        src="/favicon_io/android-chrome-192x192.png"
+        alt="Lelta logo"
+        className="size-7"
+      />
+      {wordmark && (
+        <span className="text-base font-bold tracking-tight">
+          <span className="text-brand-teal">Lel</span>
+          <span className="text-brand-gold">ta</span>
+        </span>
+      )}
+    </span>
+  )
+}
+
 /**
- * Global layout: bottom tab bar on mobile, top nav from md up.
+ * Global layout: persistent brand bar on top; bottom tab bar on mobile, inline
+ * nav in the top bar from md up.
  */
 export function AppShell() {
   return (
@@ -24,10 +44,17 @@ export function AppShell() {
         </div>
       )}
 
+      {/* Mobile top brand bar — logo + wordmark always visible */}
+      <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur pt-safe md:hidden">
+        <div className="flex h-14 items-center justify-center px-4">
+          <Brand wordmark={false} />
+        </div>
+      </header>
+
       {/* Desktop top nav */}
       <header className="sticky top-0 z-40 hidden border-b bg-background/80 backdrop-blur md:block">
         <div className="flex h-14 items-center gap-6 px-6">
-          <span className="text-base font-bold tracking-tight">Lelta</span>
+          <Brand />
           <nav className="flex gap-1">
             {tabs.map(({ to, label, icon: Icon }) => (
               <NavLink

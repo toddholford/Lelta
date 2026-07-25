@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from 'react'
-import { Triangle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,10 +35,15 @@ export function AuthPage() {
     <div className="flex min-h-dvh items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center">
-          <div className="mb-2 flex size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <Triangle className="size-6" />
-          </div>
-          <CardTitle className="text-xl">Lelta</CardTitle>
+          <img
+            src="/favicon_io/android-chrome-192x192.png"
+            alt="Lelta logo"
+            className="mb-2 size-14"
+          />
+          <CardTitle className="text-xl">
+            <span className="text-brand-teal">Lel</span>
+            <span className="text-brand-gold">ta</span>
+          </CardTitle>
           <p className="text-sm text-muted-foreground">Where household money flows</p>
         </CardHeader>
         <CardContent>

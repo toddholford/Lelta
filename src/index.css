@@ -26,6 +26,9 @@
   --input: oklch(0.88 0.012 210);
   --ring: oklch(0.6 0.1 192);
   --radius: 0.75rem;
+  /* Brand wordmark dual colours (teal + gold from the logo) */
+  --brand-teal: oklch(0.52 0.08 192);
+  --brand-gold: oklch(0.62 0.11 85);
 }
 
 /* ---- Midnight Teal (dark) — near-black + river teal (default theme) ---- */
@@ -51,6 +54,8 @@
   --border: oklch(1 0 0 / 9%);
   --input: oklch(1 0 0 / 14%);
   --ring: oklch(0.78 0.13 180);
+  --brand-teal: oklch(0.78 0.13 180);
+  --brand-gold: oklch(0.80 0.12 88);
 }
 
 /* ---- Deep Ocean (dark) — navy blue + river teal ---- */
@@ -76,6 +81,35 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.79 0.13 182);
+  --brand-teal: oklch(0.79 0.13 182);
+  --brand-gold: oklch(0.80 0.12 88);
+}
+
+/* ---- Lelta Signature (dark) — charcoal + teal & gold, from the brand logo ---- */
+.theme-brand {
+  color-scheme: dark;
+  --background: oklch(0.24 0.008 235);
+  --foreground: oklch(0.95 0.01 90);
+  --card: oklch(0.285 0.009 235);
+  --card-foreground: oklch(0.95 0.01 90);
+  --popover: oklch(0.285 0.009 235);
+  --popover-foreground: oklch(0.95 0.01 90);
+  --primary: oklch(0.68 0.088 192);
+  --primary-foreground: oklch(0.16 0.02 192);
+  --secondary: oklch(0.33 0.009 235);
+  --secondary-foreground: oklch(0.95 0.01 90);
+  --muted: oklch(0.33 0.009 235);
+  --muted-foreground: oklch(0.74 0.015 220);
+  --accent: oklch(0.4 0.05 90);
+  --accent-foreground: oklch(0.86 0.11 88);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
+  --positive: oklch(0.68 0.088 192);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.68 0.088 192);
+  --brand-teal: oklch(0.70 0.10 192);
+  --brand-gold: oklch(0.80 0.12 88);
 }
 
 @theme inline {
@@ -96,6 +130,8 @@
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-positive: var(--positive);
+  --color-brand-teal: var(--brand-teal);
+  --color-brand-gold: var(--brand-gold);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);

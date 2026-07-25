@@ -23,20 +23,27 @@ export default defineConfig(({ command }) => ({
     command === 'serve' && qrcode(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg'],
+      includeAssets: [
+        'favicon_io/favicon.ico',
+        'favicon_io/favicon-16x16.png',
+        'favicon_io/favicon-32x32.png',
+        'favicon_io/apple-touch-icon.png',
+      ],
       manifest: {
         name: 'Lelta — Household Cash Flow & Ledger',
         short_name: 'Lelta',
         description: 'Where household money flows — a shared cash-flow ledger and planner',
-        theme_color: '#0b0f10',
-        background_color: '#0b0f10',
+        theme_color: '#24282d',
+        background_color: '#24282d',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/',
+        // Brand logo mark (favicon.io export). Left as purpose 'any' — the mark
+        // sits on a transparent field and doesn't fill the maskable safe zone,
+        // so a maskable declaration would clip the triangle's corners.
         icons: [
-          { src: 'pwa-192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'pwa-512.png', sizes: '512x512', type: 'image/png' },
-          { src: 'pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: 'favicon_io/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'favicon_io/android-chrome-512x512.png', sizes: '512x512', type: 'image/png' },
         ],
       },
       workbox: {
