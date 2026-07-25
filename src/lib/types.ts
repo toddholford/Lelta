@@ -92,3 +92,32 @@ export interface Lookups {
   frequencies: TransactionFrequency[]
   accountTypes: AccountType[]
 }
+
+// ---------- Statement import / review ----------
+
+export type StatementImportStatus = 'pending' | 'reviewed' | 'committed'
+
+export interface StatementImport {
+  id: string
+  household_id: string
+  account_id: string
+  file_path: string
+  bank_format: string
+  status: StatementImportStatus
+  uploaded_by: string | null
+  created_at: string
+}
+
+export type ImportRowStatus = 'pending' | 'accepted' | 'rejected' | 'edited'
+
+export interface ImportRow {
+  id: string
+  statement_import_id: string
+  raw_data: unknown
+  parsed_source_name: string | null
+  parsed_date: string | null
+  parsed_amount_cents: number | null
+  suggested_category_id: number | null
+  status: ImportRowStatus
+  committed_transaction_id: string | null
+}

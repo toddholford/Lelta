@@ -1,12 +1,20 @@
 import { useState, type ChangeEvent } from 'react'
-import { FileUp, Upload } from 'lucide-react'
+import { ChevronRight, FileUp, Loader2, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
+import { ImportReview } from '@/components/import/import-review'
 import { supabase } from '@/lib/supabase'
 import { useAccounts } from '@/hooks/use-accounts'
 import { useProfile } from '@/hooks/use-auth'
+import {
+  useParseStatement,
+  useStatementImports,
+  type StatementImportSummary,
+} from '@/hooks/use-import'
+import { formatShortDate } from '@/lib/format'
 
 // Each account maps to a known statement format so the user only has to pick
 // the account — the parser format is resolved in the background. Institutions
@@ -26,22 +34,35 @@ function bankFormatForAccount(institution: string, file: File | null): string {
   return `${slug}_${ext === 'csv' ? 'csv' : 'pdf'}`
 }
 
+const STATUS_LABEL: Record<StatementImportSummary['status'], string> = {
+  pending: 'Needs review',
+  reviewed: 'Partially committed',
+  committed: 'Committed',
+}
+
 /**
- * Statement upload: file → Supabase Storage → statement_import row.
- * The parse Edge Function (Anthropic API) then fills import_row for review —
- * see supabase/functions/parse-statement. Parsed rows are never auto-committed.
+ * Statement upload + review. File → Supabase Storage → statement_import row →
+ * parse-statement Edge Function (Anthropic API) fills import_row → the review
+ * screen commits chosen rows into the ledger. Parsed rows are never
+ * auto-committed.
  */
 export function ImportPage() {
   const accounts = useAccounts()
   const { data: profile } = useProfile()
+  const imports = useStatementImports()
+  const parse = useParseStatement()
   const [accountId, setAccountId] = useState('')
   const [file, setFile] = useState<File | null>(null)
-  const [status, setStatus] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle')
+  const [status, setStatus] = useState<'idle' | 'uploading' | 'parsing' | 'error'>('idle')
   const [message, setMessage] = useState('')
+  const [reviewId, setReviewId] = useState<string | null>(null)
+
+  const reviewing = imports.data?.find((i) => i.id === reviewId)
 
   function onFileChange(e: ChangeEvent<HTMLInputElement>) {
     setFile(e.target.files?.[0] ?? null)
     setStatus('idle')
+    setMessage('')
   }
 
   async function handleUpload() {
@@ -58,30 +79,52 @@ export function ImportPage() {
       return
     }
     setStatus('uploading')
+    setMessage('')
     const path = `${profile.household_id}/${Date.now()}-${file.name}`
-    const { error: uploadError } = await supabase.storage
-      .from('statements')
-      .upload(path, file)
+    const { error: uploadError } = await supabase.storage.from('statements').upload(path, file)
     if (uploadError) {
       setStatus('error')
       setMessage(uploadError.message)
       return
     }
-    const { error: insertError } = await supabase.from('statement_import').insert({
-      household_id: profile.household_id,
-      account_id: account.id,
-      file_path: path,
-      bank_format: bankFormatForAccount(account.institution, file),
-      uploaded_by: profile.id,
-    })
-    if (insertError) {
+    const { data: inserted, error: insertError } = await supabase
+      .from('statement_import')
+      .insert({
+        household_id: profile.household_id,
+        account_id: account.id,
+        file_path: path,
+        bank_format: bankFormatForAccount(account.institution, file),
+        uploaded_by: profile.id,
+      })
+      .select('id')
+      .single()
+    if (insertError || !inserted) {
       setStatus('error')
-      setMessage(insertError.message)
+      setMessage(insertError?.message ?? 'Could not save the import.')
       return
     }
-    setStatus('done')
-    setMessage('Uploaded. Parsing & review flow is the next build step.')
+
+    // Kick off parsing, then drop the user straight into review.
+    setStatus('parsing')
     setFile(null)
+    try {
+      await parse.mutateAsync(inserted.id)
+      setStatus('idle')
+      setReviewId(inserted.id)
+    } catch (err) {
+      setStatus('error')
+      setMessage(
+        `Uploaded, but parsing failed: ${(err as Error).message}. You can retry it from the list below.`,
+      )
+    }
+  }
+
+  if (reviewing) {
+    return (
+      <div className="space-y-4 p-4 md:p-6">
+        <ImportReview imp={reviewing} onBack={() => setReviewId(null)} />
+      </div>
+    )
   }
 
   return (
@@ -127,9 +170,21 @@ export function ImportPage() {
             </p>
           )}
 
-          <Button onClick={handleUpload} disabled={!file || status === 'uploading'}>
-            <Upload />
-            {status === 'uploading' ? 'Uploading…' : 'Upload statement'}
+          <Button
+            onClick={handleUpload}
+            disabled={!file || status === 'uploading' || status === 'parsing'}
+          >
+            {status === 'uploading' || status === 'parsing' ? (
+              <>
+                <Loader2 className="animate-spin" />
+                {status === 'uploading' ? 'Uploading…' : 'Parsing…'}
+              </>
+            ) : (
+              <>
+                <Upload />
+                Upload statement
+              </>
+            )}
           </Button>
 
           <p className="text-xs text-muted-foreground">
@@ -138,6 +193,91 @@ export function ImportPage() {
           </p>
         </CardContent>
       </Card>
+
+      <RecentImports
+        imports={imports.data}
+        loading={imports.isLoading}
+        accountName={(id) => accounts.data?.find((a) => a.id === id)?.name}
+        onReview={setReviewId}
+        onRetryParse={(id) => parse.mutate(id)}
+        retryingId={parse.isPending ? (parse.variables ?? null) : null}
+      />
+    </div>
+  )
+}
+
+interface RecentImportsProps {
+  imports: StatementImportSummary[] | undefined
+  loading: boolean
+  accountName: (id: string) => string | undefined
+  onReview: (id: string) => void
+  onRetryParse: (id: string) => void
+  retryingId: string | null
+}
+
+function RecentImports({
+  imports,
+  loading,
+  accountName,
+  onReview,
+  onRetryParse,
+  retryingId,
+}: RecentImportsProps) {
+  if (loading) {
+    return (
+      <div className="space-y-2">
+        <Skeleton className="h-16 rounded-xl" />
+        <Skeleton className="h-16 rounded-xl" />
+      </div>
+    )
+  }
+  if (!imports?.length) return null
+
+  return (
+    <div className="space-y-2">
+      <h2 className="text-sm font-medium text-muted-foreground">Recent imports</h2>
+      {imports.map((imp) => {
+        const stalled = imp.status === 'pending' && imp.total === 0
+        return (
+          <Card key={imp.id}>
+            <CardContent className="flex items-center gap-3 p-3">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">
+                  {accountName(imp.account_id) ?? imp.bank_format}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {formatShortDate(imp.created_at.slice(0, 10))} ·{' '}
+                  {stalled ? (
+                    <span className="inline-flex items-center gap-1">
+                      <Loader2 className="size-3 animate-spin" /> parsing…
+                    </span>
+                  ) : (
+                    <>
+                      {STATUS_LABEL[imp.status]}
+                      {imp.total > 0 && ` · ${imp.pending} of ${imp.total} to review`}
+                    </>
+                  )}
+                </p>
+              </div>
+              {stalled ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onRetryParse(imp.id)}
+                  disabled={retryingId === imp.id}
+                >
+                  {retryingId === imp.id ? <Loader2 className="animate-spin" /> : 'Retry parse'}
+                </Button>
+              ) : (
+                <Button variant="ghost" size="sm" onClick={() => onReview(imp.id)}>
+                  {imp.pending > 0 ? 'Review' : 'View'}
+                  <ChevronRight />
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )
+      })}
     </div>
   )
 }

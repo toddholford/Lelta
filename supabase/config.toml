@@ -1,0 +1,8 @@
+# Supabase CLI config. `project_id` is a local label; the remote project is
+# chosen by `supabase link --project-ref <ref>`.
+project_id = "lelta"
+
+# The parser is invoked from the browser with the signed-in user's JWT, so keep
+# JWT verification on — only authenticated household members can trigger a parse.
+[functions.parse-statement]
+verify_jwt = true
