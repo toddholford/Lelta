@@ -45,9 +45,11 @@ export function useStatementImports() {
     queryKey: ['statement-imports'],
     queryFn: fetchImports,
     // Parsing happens out-of-band in the Edge Function, so poll while any
-    // import is still awaiting its rows.
+    // import is mid-parse; it settles to 'parsed' or 'failed'.
     refetchInterval: (query) =>
-      (query.state.data ?? []).some((i) => i.status === 'pending' && i.total === 0) ? 2500 : false,
+      (query.state.data ?? []).some((i) => i.status === 'pending' || i.status === 'parsing')
+        ? 2500
+        : false,
   })
 }
 
@@ -86,10 +88,32 @@ export function useParseStatement() {
       if (error) throw error
       return data as { inserted: number }
     },
-    onSuccess: (_data, importId) => {
+    // Refresh on both success and failure — the function stamps the import's
+    // final status ('parsed' or 'failed') either way, so the list must refetch.
+    onSettled: (_data, _error, importId) => {
       queryClient.invalidateQueries({ queryKey: ['statement-imports'] })
       queryClient.invalidateQueries({ queryKey: ['import-rows', importId] })
     },
+  })
+}
+
+/**
+ * Discard an import: remove the uploaded file and delete the statement_import
+ * row (which cascades to its import_row children). Used to clear a parse that
+ * stalled or failed. Rows already committed to the ledger are unaffected —
+ * transaction rows don't depend on import_row.
+ */
+export function useDeleteImport() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, filePath }: { id: string; filePath: string }) => {
+      if (!supabase) throw new Error('Connect Supabase to manage imports.')
+      // Best-effort file cleanup, then the row (import_row cascades on delete).
+      await supabase.storage.from('statements').remove([filePath])
+      const { error } = await supabase.from('statement_import').delete().eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['statement-imports'] }),
   })
 }
 

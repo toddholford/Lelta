@@ -95,7 +95,13 @@ export interface Lookups {
 
 // ---------- Statement import / review ----------
 
-export type StatementImportStatus = 'pending' | 'reviewed' | 'committed'
+export type StatementImportStatus =
+  | 'pending'
+  | 'parsing'
+  | 'parsed'
+  | 'failed'
+  | 'reviewed'
+  | 'committed'
 
 export interface StatementImport {
   id: string
@@ -104,6 +110,8 @@ export interface StatementImport {
   file_path: string
   bank_format: string
   status: StatementImportStatus
+  /** Failure reason when status is 'failed'; null otherwise. */
+  error: string | null
   uploaded_by: string | null
   created_at: string
 }

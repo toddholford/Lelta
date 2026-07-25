@@ -8,6 +8,11 @@
 //   4. Insert parsed rows into import_row with status 'pending'.
 //      Nothing is ever auto-committed — the client review screen does that.
 //
+// The statement_import.status tracks the parse lifecycle:
+//   pending -> parsing -> parsed   (success, rows awaiting review)
+//                      -> failed   (error stamped into statement_import.error)
+// A retry re-runs against a failed import and clears its prior rows/error.
+//
 // Secrets required (supabase secrets set):
 //   ANTHROPIC_API_KEY
 //
@@ -69,32 +74,56 @@ const json = (body: unknown, init?: ResponseInit) =>
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
+
+  // Service role: this function is the only privileged writer in the system.
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+  )
+
+  let importId: string | null = null
+
+  // Stamp a terminal failure onto the import so the UI stops showing a
+  // "parsing…" spinner and surfaces the reason with a Retry / Discard action.
+  const markFailed = async (msg: string, status = 500) => {
+    if (importId) {
+      await supabase
+        .from('statement_import')
+        .update({ status: 'failed', error: msg })
+        .eq('id', importId)
+    }
+    return json({ error: msg }, { status })
+  }
+
   try {
-    const { statement_import_id } = await req.json()
-    if (!statement_import_id) {
+    const body = await req.json()
+    importId = body.statement_import_id ?? null
+    if (!importId) {
       return json({ error: 'statement_import_id required' }, { status: 400 })
     }
-
-    // Service role: this function is the only privileged writer in the system.
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-    )
 
     const { data: imp, error: impError } = await supabase
       .from('statement_import')
       .select('*')
-      .eq('id', statement_import_id)
+      .eq('id', importId)
       .single()
     if (impError || !imp) {
+      // No row to stamp — just report it.
       return json({ error: 'statement_import not found' }, { status: 404 })
     }
+
+    // Mark in-flight and clear any prior error/rows — this may be a retry.
+    await supabase
+      .from('statement_import')
+      .update({ status: 'parsing', error: null })
+      .eq('id', importId)
+    await supabase.from('import_row').delete().eq('statement_import_id', importId)
 
     const { data: file, error: fileError } = await supabase.storage
       .from('statements')
       .download(imp.file_path)
     if (fileError || !file) {
-      return json({ error: 'statement file not found' }, { status: 404 })
+      return markFailed('Statement file not found in storage.', 404)
     }
 
     const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY')! })
@@ -130,12 +159,19 @@ Deno.serve(async (req) => {
       .filter((b): b is Anthropic.TextBlock => b.type === 'text')
       .map((b) => b.text)
       .join('')
-    const parsed: {
+
+    let parsed: {
       source_name: string
       date: string
       amount_cents: number
       suggested_category: string | null
-    }[] = JSON.parse(stripFences(text))
+    }[]
+    try {
+      parsed = JSON.parse(stripFences(text))
+      if (!Array.isArray(parsed)) throw new Error('not an array')
+    } catch {
+      return markFailed('The parser did not return valid JSON for this statement.')
+    }
 
     // Map suggested category names to ids.
     const { data: categories } = await supabase.from('transaction_category').select('id, name')
@@ -143,7 +179,7 @@ Deno.serve(async (req) => {
       categories?.find((c) => c.name === name)?.id ?? null
 
     const rows = parsed.map((p) => ({
-      statement_import_id,
+      statement_import_id: importId,
       raw_data: p,
       parsed_source_name: p.source_name,
       parsed_date: p.date,
@@ -152,13 +188,21 @@ Deno.serve(async (req) => {
       status: 'pending',
     }))
 
-    const { error: insertError } = await supabase.from('import_row').insert(rows)
-    if (insertError) {
-      return json({ error: insertError.message }, { status: 500 })
+    if (rows.length) {
+      const { error: insertError } = await supabase.from('import_row').insert(rows)
+      if (insertError) {
+        return markFailed(insertError.message)
+      }
     }
+
+    // Success — rows (if any) are waiting for review.
+    await supabase
+      .from('statement_import')
+      .update({ status: 'parsed', error: null })
+      .eq('id', importId)
 
     return json({ inserted: rows.length })
   } catch (err) {
-    return json({ error: String(err) }, { status: 500 })
+    return markFailed(String(err))
   }
 })

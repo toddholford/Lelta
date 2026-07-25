@@ -1,5 +1,5 @@
 import { useState, type ChangeEvent } from 'react'
-import { ChevronRight, FileUp, Loader2, Upload } from 'lucide-react'
+import { ChevronRight, FileUp, Loader2, Upload, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase'
 import { useAccounts } from '@/hooks/use-accounts'
 import { useProfile } from '@/hooks/use-auth'
 import {
+  useDeleteImport,
   useParseStatement,
   useStatementImports,
   type StatementImportSummary,
@@ -34,8 +35,10 @@ function bankFormatForAccount(institution: string, file: File | null): string {
   return `${slug}_${ext === 'csv' ? 'csv' : 'pdf'}`
 }
 
-const STATUS_LABEL: Record<StatementImportSummary['status'], string> = {
-  pending: 'Needs review',
+// Labels for imports that have finished parsing (working/failed states render
+// their own text below).
+const STATUS_LABEL: Partial<Record<StatementImportSummary['status'], string>> = {
+  parsed: 'Ready to review',
   reviewed: 'Partially committed',
   committed: 'Committed',
 }
@@ -51,6 +54,7 @@ export function ImportPage() {
   const { data: profile } = useProfile()
   const imports = useStatementImports()
   const parse = useParseStatement()
+  const discard = useDeleteImport()
   const [accountId, setAccountId] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [status, setStatus] = useState<'idle' | 'uploading' | 'parsing' | 'error'>('idle')
@@ -201,6 +205,8 @@ export function ImportPage() {
         onReview={setReviewId}
         onRetryParse={(id) => parse.mutate(id)}
         retryingId={parse.isPending ? (parse.variables ?? null) : null}
+        onDiscard={(id, filePath) => discard.mutate({ id, filePath })}
+        discardingId={discard.isPending ? (discard.variables?.id ?? null) : null}
       />
     </div>
   )
@@ -213,6 +219,8 @@ interface RecentImportsProps {
   onReview: (id: string) => void
   onRetryParse: (id: string) => void
   retryingId: string | null
+  onDiscard: (id: string, filePath: string) => void
+  discardingId: string | null
 }
 
 function RecentImports({
@@ -222,6 +230,8 @@ function RecentImports({
   onReview,
   onRetryParse,
   retryingId,
+  onDiscard,
+  discardingId,
 }: RecentImportsProps) {
   if (loading) {
     return (
@@ -237,7 +247,20 @@ function RecentImports({
     <div className="space-y-2">
       <h2 className="text-sm font-medium text-muted-foreground">Recent imports</h2>
       {imports.map((imp) => {
-        const stalled = imp.status === 'pending' && imp.total === 0
+        const working = imp.status === 'pending' || imp.status === 'parsing'
+        const failed = imp.status === 'failed'
+        const discardButton = (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-muted-foreground hover:text-destructive"
+            aria-label="Discard this import"
+            onClick={() => onDiscard(imp.id, imp.file_path)}
+            disabled={discardingId === imp.id}
+          >
+            {discardingId === imp.id ? <Loader2 className="animate-spin" /> : <X />}
+          </Button>
+        )
         return (
           <Card key={imp.id}>
             <CardContent className="flex items-center gap-3 p-3">
@@ -245,29 +268,36 @@ function RecentImports({
                 <p className="truncate text-sm font-medium">
                   {accountName(imp.account_id) ?? imp.bank_format}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className={`text-xs ${failed ? 'text-destructive' : 'text-muted-foreground'}`}>
                   {formatShortDate(imp.created_at.slice(0, 10))} ·{' '}
-                  {stalled ? (
+                  {working ? (
                     <span className="inline-flex items-center gap-1">
                       <Loader2 className="size-3 animate-spin" /> parsing…
                     </span>
+                  ) : failed ? (
+                    <>Parse failed{imp.error ? ` · ${imp.error}` : ''}</>
                   ) : (
                     <>
-                      {STATUS_LABEL[imp.status]}
+                      {STATUS_LABEL[imp.status] ?? imp.status}
                       {imp.total > 0 && ` · ${imp.pending} of ${imp.total} to review`}
                     </>
                   )}
                 </p>
               </div>
-              {stalled ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onRetryParse(imp.id)}
-                  disabled={retryingId === imp.id}
-                >
-                  {retryingId === imp.id ? <Loader2 className="animate-spin" /> : 'Retry parse'}
-                </Button>
+              {working ? (
+                discardButton
+              ) : failed ? (
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onRetryParse(imp.id)}
+                    disabled={retryingId === imp.id || discardingId === imp.id}
+                  >
+                    {retryingId === imp.id ? <Loader2 className="animate-spin" /> : 'Retry parse'}
+                  </Button>
+                  {discardButton}
+                </div>
               ) : (
                 <Button variant="ghost" size="sm" onClick={() => onReview(imp.id)}>
                   {imp.pending > 0 ? 'Review' : 'View'}

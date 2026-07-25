@@ -94,13 +94,20 @@ export function ImportReview({ imp, onBack }: ImportReviewProps) {
     return (
       <div className="space-y-4">
         <BackBar account={account?.name} onBack={onBack} />
-        <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-          {imp.status === 'pending' ? (
+        <div
+          className={cn(
+            'rounded-xl border border-dashed p-8 text-center text-sm',
+            imp.status === 'failed' ? 'text-destructive' : 'text-muted-foreground',
+          )}
+        >
+          {imp.status === 'pending' || imp.status === 'parsing' ? (
             <span className="flex items-center justify-center gap-2">
               <Loader2 className="size-4 animate-spin" /> Parsing statement…
             </span>
+          ) : imp.status === 'failed' ? (
+            imp.error || 'Parsing failed for this statement.'
           ) : (
-            'No rows were parsed from this statement.'
+            'No transactions were found in this statement.'
           )}
         </div>
       </div>
