@@ -146,7 +146,7 @@ export function LedgerPage() {
         </div>
 
         <div className="space-y-4 px-4 pt-1 md:px-0">
-          <StatTiles transactions={visibleTransactions} />
+          <StatTiles transactions={visibleTransactions} lookups={lookups.data} />
 
           {loadError && (
             <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">

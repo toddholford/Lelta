@@ -1,8 +1,10 @@
 import {
+  Banknote,
   CircleDollarSign,
   CreditCard,
   Landmark,
   PartyPopper,
+  PiggyBank,
   Repeat,
   ShoppingBag,
   ShoppingCart,
@@ -23,6 +25,8 @@ const iconByCategory: Record<string, LucideIcon> = {
   dining: UtensilsCrossed,
   maintenance: Wrench,
   fun: PartyPopper,
+  paycheck: Banknote,
+  other: PiggyBank,
 }
 
 export function CategoryIcon({ category, className }: { category?: string; className?: string }) {

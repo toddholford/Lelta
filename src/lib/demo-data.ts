@@ -19,6 +19,7 @@ export const demoLookups: Lookups = {
   types: [
     { id: 1, name: 'payments' },
     { id: 3, name: 'spending' },
+    { id: 5, name: 'income' },
   ],
   categories: [
     { id: 1, transaction_type_id: 1, name: 'credit card' },
@@ -30,6 +31,8 @@ export const demoLookups: Lookups = {
     { id: 8, transaction_type_id: 3, name: 'dining' },
     { id: 9, transaction_type_id: 3, name: 'maintenance' },
     { id: 10, transaction_type_id: 3, name: 'fun' },
+    { id: 20, transaction_type_id: 5, name: 'paycheck' },
+    { id: 21, transaction_type_id: 5, name: 'other' },
   ],
   frequencies: [
     { id: 1, name: 'weekly' },
@@ -115,4 +118,8 @@ export const demoTransactions: Transaction[] = [
   txn({ account_id: 'acct-chase-visa', transaction_type_id: 3, transaction_category_id: 8, source_name: 'Olive Garden', txn_date: iso(2), amount_cents: 5240 }),
   txn({ account_id: 'acct-chase-visa', transaction_type_id: 3, transaction_category_id: 7, source_name: 'Amazon', txn_date: iso(5), amount_cents: 3199 }),
   txn({ account_id: 'acct-chase-visa', transaction_type_id: 3, transaction_category_id: 10, source_name: 'Steam', txn_date: iso(7), amount_cents: 5999 }),
+  // Income (money in) — deposits into the Capital One hub. Positive magnitude;
+  // the ledger renders these with a "+" sign, not counted as spending.
+  txn({ account_id: 'acct-capone', transaction_type_id: 5, transaction_category_id: 20, source_name: 'Acme Payroll', txn_date: iso(3), amount_cents: 285000, transaction_frequency_id: 2 }),
+  txn({ account_id: 'acct-capone', transaction_type_id: 5, transaction_category_id: 21, source_name: 'Venmo from Sam', txn_date: iso(6), amount_cents: 4200 }),
 ]

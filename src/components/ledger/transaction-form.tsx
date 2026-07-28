@@ -57,21 +57,25 @@ export function TransactionForm({
     }
   }, [categoryOptions, categoryId])
 
-  // Frequency + due date only apply to Payments (bills, loans, subs).
-  const paymentsTypeId = useMemo(
-    () => lookups.types.find((t) => t.name === 'payments')?.id,
+  // Frequency + due date apply to scheduled money: Payments (bills, loans,
+  // subs) and Income (a recurring paycheck). Spending is one-off.
+  const scheduledTypeIds = useMemo(
+    () =>
+      new Set(
+        lookups.types.filter((t) => t.name === 'payments' || t.name === 'income').map((t) => t.id),
+      ),
     [lookups.types],
   )
-  const isPayments = typeId === paymentsTypeId
+  const showSchedule = scheduledTypeIds.has(typeId)
 
-  // Clear frequency/due when switching away from Payments so stale values
-  // aren't submitted on a spending entry.
+  // Clear frequency/due when switching to a type that doesn't schedule, so
+  // stale values aren't submitted on a spending entry.
   useEffect(() => {
-    if (!isPayments) {
+    if (!showSchedule) {
       setFrequencyId('')
       setDueDate('')
     }
-  }, [isPayments])
+  }, [showSchedule])
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -127,7 +131,7 @@ export function TransactionForm({
         </div>
       </div>
 
-      <div className={cn('grid gap-3', isPayments ? 'grid-cols-2' : 'grid-cols-1')}>
+      <div className={cn('grid gap-3', showSchedule ? 'grid-cols-2' : 'grid-cols-1')}>
         <div className="grid min-w-0 gap-1.5">
           <Label htmlFor="txn-account">Account</Label>
           <Select
@@ -140,7 +144,7 @@ export function TransactionForm({
             ))}
           </Select>
         </div>
-        {isPayments && (
+        {showSchedule && (
           <div className="grid min-w-0 gap-1.5">
             <Label htmlFor="txn-frequency">Frequency</Label>
             <Select
@@ -170,7 +174,7 @@ export function TransactionForm({
         />
       </div>
 
-      <div className={cn('grid gap-3', isPayments ? 'grid-cols-2' : 'grid-cols-1')}>
+      <div className={cn('grid gap-3', showSchedule ? 'grid-cols-2' : 'grid-cols-1')}>
         <div className="grid min-w-0 gap-1.5">
           <Label htmlFor="txn-date">Date</Label>
           <Input
@@ -182,7 +186,7 @@ export function TransactionForm({
             onChange={(e) => setDate(e.target.value)}
           />
         </div>
-        {isPayments && (
+        {showSchedule && (
           <div className="grid min-w-0 gap-1.5">
             <Label htmlFor="txn-due">Due date</Label>
             <Input

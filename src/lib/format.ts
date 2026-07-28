@@ -8,6 +8,15 @@ export function formatCents(cents: number): string {
   return usd.format(cents / 100)
 }
 
+/**
+ * Format a transaction amount with an explicit direction sign. `amount_cents`
+ * is a positive magnitude; income shows a leading "+", everything else "-".
+ * 250000, true -> "+$2,500.00"
+ */
+export function formatSignedCents(cents: number, isIncome: boolean): string {
+  return `${isIncome ? '+' : '-'}${formatCents(Math.abs(cents))}`
+}
+
 /** Parse a user-entered dollar string into integer cents. "12.34" -> 1234 */
 export function parseDollarsToCents(input: string): number | null {
   const cleaned = input.replace(/[$,\s]/g, '')

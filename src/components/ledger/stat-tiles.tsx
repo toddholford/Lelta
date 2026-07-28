@@ -1,13 +1,19 @@
 import { formatCents, todayISO } from '@/lib/format'
-import type { Transaction } from '@/lib/types'
+import { incomeTypeIds } from '@/lib/txn'
+import type { Lookups, Transaction } from '@/lib/types'
 import { Card } from '@/components/ui/card'
 
 interface StatTilesProps {
   transactions: Transaction[]
+  lookups?: Lookups
 }
 
-export function StatTiles({ transactions }: StatTilesProps) {
-  const total = transactions.reduce((sum, t) => sum + t.amount_cents, 0)
+export function StatTiles({ transactions, lookups }: StatTilesProps) {
+  // "Month total" and "bills due soon" are spending figures — income (money
+  // in) is excluded from them.
+  const income = incomeTypeIds({ types: lookups?.types ?? [] })
+  const expenses = transactions.filter((t) => !income.has(t.transaction_type_id))
+  const total = expenses.reduce((sum, t) => sum + t.amount_cents, 0)
 
   const today = todayISO()
   const soonCutoff = (() => {
@@ -15,7 +21,7 @@ export function StatTiles({ transactions }: StatTilesProps) {
     const dt = new Date(Date.UTC(y, m - 1, d + 7))
     return dt.toISOString().slice(0, 10)
   })()
-  const dueSoon = transactions.filter(
+  const dueSoon = expenses.filter(
     (t) => t.due_date && t.due_date >= today && t.due_date <= soonCutoff,
   )
   const dueSoonTotal = dueSoon.reduce((sum, t) => sum + t.amount_cents, 0)

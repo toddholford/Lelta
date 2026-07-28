@@ -57,10 +57,11 @@ Return ONLY a JSON array; each element:
 {
   "source_name": string,        // merchant / payee, cleaned up
   "date": "YYYY-MM-DD",
-  "amount_cents": integer,      // positive integer cents, outflows only
-  "suggested_category": string | null  // one of: credit card, loan, utils, subs, groceries, shopping, dining, maintenance, fun
+  "amount_cents": integer,      // positive integer cents — the magnitude only, never negative
+  "direction": "expense" | "income",  // income = money in (deposits, paychecks, refunds, interest); expense = money out (purchases, bills, withdrawals)
+  "suggested_category": string | null  // expenses: credit card, loan, utils, subs, groceries, shopping, dining, maintenance, fun. income: paycheck, other
 }
-Skip deposits, interest, and running-balance lines. No prose, no markdown fences.`
+Include both outflows (expense) and inflows (income) — classify every line, do not drop deposits. Skip only running-balance summary lines. No prose, no markdown fences.`
 
 // The client invokes this from the browser via supabase.functions.invoke,
 // which sends a CORS preflight — echo the headers back or the call fails.
@@ -164,6 +165,7 @@ Deno.serve(async (req) => {
       source_name: string
       date: string
       amount_cents: number
+      direction?: 'expense' | 'income'
       suggested_category: string | null
     }[]
     try {
@@ -173,20 +175,39 @@ Deno.serve(async (req) => {
       return markFailed('The parser did not return valid JSON for this statement.')
     }
 
-    // Map suggested category names to ids.
-    const { data: categories } = await supabase.from('transaction_category').select('id, name')
-    const categoryId = (name: string | null) =>
-      categories?.find((c) => c.name === name)?.id ?? null
+    // Map suggested category names to ids. Category names are unique across
+    // types, so a name resolves to exactly one (type, category).
+    const { data: categories } = await supabase
+      .from('transaction_category')
+      .select('id, name, transaction_type_id')
+    const categoryIdByName = new Map((categories ?? []).map((c) => [c.name, c.id]))
 
-    const rows = parsed.map((p) => ({
-      statement_import_id: importId,
-      raw_data: p,
-      parsed_source_name: p.source_name,
-      parsed_date: p.date,
-      parsed_amount_cents: Math.round(p.amount_cents),
-      suggested_category_id: categoryId(p.suggested_category),
-      status: 'pending',
-    }))
+    // The type carries direction; when the model flags a row as income but
+    // gives no category, fall back to the generic income 'other' bucket so it
+    // still lands under income for review rather than uncategorized.
+    const { data: incomeType } = await supabase
+      .from('transaction_type')
+      .select('id')
+      .eq('name', 'income')
+      .maybeSingle()
+    const incomeOtherId =
+      (categories ?? []).find(
+        (c) => c.transaction_type_id === incomeType?.id && c.name === 'other',
+      )?.id ?? null
+
+    const rows = parsed.map((p) => {
+      let suggested = p.suggested_category ? categoryIdByName.get(p.suggested_category) ?? null : null
+      if (suggested == null && p.direction === 'income') suggested = incomeOtherId
+      return {
+        statement_import_id: importId,
+        raw_data: p,
+        parsed_source_name: p.source_name,
+        parsed_date: p.date,
+        parsed_amount_cents: Math.abs(Math.round(p.amount_cents)),
+        suggested_category_id: suggested,
+        status: 'pending',
+      }
+    })
 
     if (rows.length) {
       const { error: insertError } = await supabase.from('import_row').insert(rows)

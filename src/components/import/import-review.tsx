@@ -8,7 +8,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useAccounts } from '@/hooks/use-accounts'
 import { useLookups } from '@/hooks/use-lookups'
 import { useCommitImport, useImportRows, type CommitPayload } from '@/hooks/use-import'
-import { formatCents, formatShortDate, parseDollarsToCents } from '@/lib/format'
+import { formatShortDate, formatSignedCents, parseDollarsToCents } from '@/lib/format'
+import { isIncomeType } from '@/lib/txn'
 import { cn } from '@/lib/utils'
 import type { ImportRow, Lookups, StatementImport } from '@/lib/types'
 
@@ -246,6 +247,8 @@ interface RowCardProps {
 function RowCard({ draft, lookups, onChange }: RowCardProps) {
   const cents = parseDollarsToCents(draft.amount)
   const amountValid = cents !== null && cents !== 0
+  const category = lookups.categories.find((c) => c.id === draft.categoryId)
+  const income = category ? isIncomeType(category.transaction_type_id, lookups) : false
 
   return (
     <div
@@ -312,7 +315,9 @@ function RowCard({ draft, lookups, onChange }: RowCardProps) {
       {draft.include && amountValid && (
         <p className="mt-1.5 pl-7 text-xs text-muted-foreground">
           {draft.date && `${formatShortDate(draft.date)} · `}
-          {formatCents(cents!)} outflow
+          <span className={cn(income && 'text-emerald-600 dark:text-emerald-400')}>
+            {formatSignedCents(cents!, income)} {income ? 'income' : 'outflow'}
+          </span>
         </p>
       )}
     </div>
