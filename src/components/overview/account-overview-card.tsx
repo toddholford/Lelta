@@ -13,6 +13,8 @@ interface AccountOverviewCardProps {
   startingCents: number | null
   /** Total spent from this account this month, in cents. */
   spentCents: number
+  /** Total income gained into this account this month, in cents. */
+  gainedCents: number
   entries: number
   /** Credit cards have no cash balance — show charged-this-month instead. */
   isCredit: boolean
@@ -24,6 +26,7 @@ export function AccountOverviewCard({
   account,
   startingCents,
   spentCents,
+  gainedCents,
   entries,
   isCredit,
   saving,
@@ -66,7 +69,8 @@ export function AccountOverviewCard({
   }
 
   const hasStarting = startingCents != null
-  const remaining = hasStarting ? startingCents - spentCents : null
+  // Cash left = starting + income gained − spent.
+  const remaining = hasStarting ? startingCents + gainedCents - spentCents : null
   const pct = hasStarting && startingCents > 0 ? Math.min(spentCents / startingCents, 1) : 0
   const overspent = remaining != null && remaining < 0
 
@@ -105,6 +109,11 @@ export function AccountOverviewCard({
           </p>
           <p className="text-xs text-muted-foreground">
             {overspent ? 'over the starting balance' : 'remaining this month'}
+            {gainedCents > 0 && (
+              <span className="text-emerald-600 dark:text-emerald-400">
+                {' · '}+{formatCents(gainedCents)} gained
+              </span>
+            )}
           </p>
 
           {/* Drain meter */}
@@ -116,7 +125,15 @@ export function AccountOverviewCard({
           </div>
         </>
       ) : (
-        <p className="mt-3 text-sm text-muted-foreground">No starting balance set for this month.</p>
+        <p className="mt-3 text-sm text-muted-foreground">
+          No starting balance set for this month.
+          {gainedCents > 0 && (
+            <span className="text-emerald-600 dark:text-emerald-400">
+              {' '}
+              <span className="tabular-nums">+{formatCents(gainedCents)}</span> gained.
+            </span>
+          )}
+        </p>
       )}
 
       {/* Starting balance + spent row */}

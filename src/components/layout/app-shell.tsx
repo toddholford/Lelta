@@ -3,6 +3,7 @@ import { BookOpenText, Wallet, FileUp, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { isDemoMode } from '@/lib/supabase'
 import { MonthProvider } from '@/hooks/use-month'
+import { useFullWidth } from '@/hooks/use-full-width'
 
 const tabs = [
   { to: '/', label: 'Ledger', icon: BookOpenText },
@@ -35,9 +36,17 @@ function Brand({ wordmark = true }: { wordmark?: boolean }) {
  * nav in the top bar from md up.
  */
 export function AppShell() {
+  const { fullWidth } = useFullWidth()
   return (
     <MonthProvider>
-    <div className="mx-auto flex min-h-dvh w-full max-w-5xl flex-col">
+    <div
+      className={cn(
+        'mx-auto flex min-h-dvh w-full flex-col',
+        // Full-width mode stretches edge-to-edge on desktop; mobile is already
+        // full-bleed, so the cap only ever bites from md up.
+        fullWidth ? 'max-w-none' : 'max-w-5xl',
+      )}
+    >
       {isDemoMode && (
         <div className="bg-amber-500/15 px-4 py-1.5 text-center text-xs font-medium text-amber-700 dark:text-amber-400">
           Demo mode — set VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY to connect your backend

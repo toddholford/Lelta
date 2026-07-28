@@ -8,12 +8,14 @@ import { useLookups } from '@/hooks/use-lookups'
 import { useTransactions } from '@/hooks/use-transactions'
 import { useMonthBalances, useSetMonthBalance } from '@/hooks/use-month-balances'
 import { useMonth } from '@/hooks/use-month'
+import { useFullWidth } from '@/hooks/use-full-width'
 import { formatCents } from '@/lib/format'
 import { incomeTypeIds } from '@/lib/txn'
 
 /** Sub-tab 1: cash-on-hand roll-up and per-account starting balances. */
 export function BalanceTracker() {
   const { year, month, setMonth } = useMonth()
+  const { fullWidth } = useFullWidth()
 
   const accounts = useAccounts()
   const lookups = useLookups()
@@ -31,18 +33,22 @@ export function BalanceTracker() {
     )
   }, [lookups.data, accounts.data])
 
-  // Per-account spending + entry counts for the month. Income rows are money
-  // in, not spending, so they're excluded from these spend totals.
-  const { spentByAccount, entriesByAccount } = useMemo(() => {
+  // Per-account spending, income gained, and entry counts for the month.
+  // Income rows are money in (not spending), so they roll up separately.
+  const { spentByAccount, gainedByAccount, entriesByAccount } = useMemo(() => {
     const income = incomeTypeIds({ types: lookups.data?.types ?? [] })
     const spent = new Map<string, number>()
+    const gained = new Map<string, number>()
     const count = new Map<string, number>()
     for (const t of transactions.data ?? []) {
-      if (income.has(t.transaction_type_id)) continue
+      if (income.has(t.transaction_type_id)) {
+        gained.set(t.account_id, (gained.get(t.account_id) ?? 0) + t.amount_cents)
+        continue
+      }
       spent.set(t.account_id, (spent.get(t.account_id) ?? 0) + t.amount_cents)
       count.set(t.account_id, (count.get(t.account_id) ?? 0) + 1)
     }
-    return { spentByAccount: spent, entriesByAccount: count }
+    return { spentByAccount: spent, gainedByAccount: gained, entriesByAccount: count }
   }, [transactions.data, lookups.data])
 
   const startingByAccount = useMemo(
@@ -54,21 +60,24 @@ export function BalanceTracker() {
   const creditAccounts = (accounts.data ?? []).filter((a) => creditAccountIds.has(a.id))
 
   // Roll-up across cash accounts that have a starting balance set.
+  // Cash on hand = starting + gained (income in) − spent (money out).
   const rollup = useMemo(() => {
     let starting = 0
     let spent = 0
+    let gained = 0
     let hasAny = false
     for (const a of cashAccounts) {
       const s = startingByAccount.get(a.id)
       spent += spentByAccount.get(a.id) ?? 0
+      gained += gainedByAccount.get(a.id) ?? 0
       if (s != null) {
         starting += s
         hasAny = true
       }
     }
-    return { starting, spent, remaining: starting - spent, hasAny }
+    return { starting, spent, gained, remaining: starting + gained - spent, hasAny }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cashAccounts, startingByAccount, spentByAccount])
+  }, [cashAccounts, startingByAccount, spentByAccount, gainedByAccount])
 
   function handleSetStarting(accountId: string, cents: number) {
     setBalance.mutate({ account_id: accountId, year, month, starting_cents: cents })
@@ -76,6 +85,12 @@ export function BalanceTracker() {
 
   const loading = accounts.isPending || lookups.isPending || transactions.isPending
   const loadError = accounts.error ?? lookups.error ?? transactions.error
+
+  // Full-width mode fans the account cards into columns (one per account) that
+  // wrap when they run out of room; otherwise they stack in a single column.
+  const accountListClass = fullWidth
+    ? 'grid gap-3 md:[grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]'
+    : 'space-y-3'
 
   return (
     <div className="space-y-4">
@@ -104,13 +119,21 @@ export function BalanceTracker() {
               <p className="mt-1 text-3xl font-bold tabular-nums">
                 {rollup.hasAny ? formatCents(rollup.remaining) : '—'}
               </p>
-              <div className="mt-3 flex gap-6 text-xs text-muted-foreground">
+              <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground">
                 <span>
                   Started with{' '}
                   <span className="font-medium text-foreground tabular-nums">
                     {rollup.hasAny ? formatCents(rollup.starting) : '—'}
                   </span>
                 </span>
+                {rollup.gained > 0 && (
+                  <span>
+                    Gained{' '}
+                    <span className="font-medium tabular-nums text-emerald-600 dark:text-emerald-400">
+                      +{formatCents(rollup.gained)}
+                    </span>
+                  </span>
+                )}
                 <span>
                   Spent{' '}
                   <span className="font-medium text-foreground tabular-nums">
@@ -127,13 +150,14 @@ export function BalanceTracker() {
           </Card>
 
           {/* Cash accounts */}
-          <div className="space-y-3">
+          <div className={accountListClass}>
             {cashAccounts.map((a) => (
               <AccountOverviewCard
                 key={a.id}
                 account={a}
                 startingCents={startingByAccount.get(a.id) ?? null}
                 spentCents={spentByAccount.get(a.id) ?? 0}
+                gainedCents={gainedByAccount.get(a.id) ?? 0}
                 entries={entriesByAccount.get(a.id) ?? 0}
                 isCredit={false}
                 saving={setBalance.isPending}
@@ -148,18 +172,21 @@ export function BalanceTracker() {
               <p className="pt-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                 Credit cards
               </p>
+              <div className={accountListClass}>
               {creditAccounts.map((a) => (
                 <AccountOverviewCard
                   key={a.id}
                   account={a}
                   startingCents={null}
                   spentCents={spentByAccount.get(a.id) ?? 0}
+                  gainedCents={gainedByAccount.get(a.id) ?? 0}
                   entries={entriesByAccount.get(a.id) ?? 0}
                   isCredit
                   saving={false}
                   onSetStarting={() => {}}
                 />
               ))}
+              </div>
             </div>
           )}
         </>

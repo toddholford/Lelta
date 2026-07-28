@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AppShell } from '@/components/layout/app-shell'
+import { FullWidthProvider } from '@/hooks/use-full-width'
 import { LedgerPage } from '@/pages/ledger-page'
 import { OverviewPage } from '@/pages/overview-page'
 import { ImportPage } from '@/pages/import-page'
@@ -41,9 +42,11 @@ function Gate() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Gate />
-      </BrowserRouter>
+      <FullWidthProvider>
+        <BrowserRouter>
+          <Gate />
+        </BrowserRouter>
+      </FullWidthProvider>
     </QueryClientProvider>
   )
 }

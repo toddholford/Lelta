@@ -5,10 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 import { useAccounts, useCreateAccount } from '@/hooks/use-accounts'
 import { useLookups } from '@/hooks/use-lookups'
 import { signOut, useProfile } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
+import { useFullWidth } from '@/hooks/use-full-width'
 import { THEMES, type ThemeId } from '@/lib/theme'
 import { isDemoMode } from '@/lib/supabase'
 
@@ -18,6 +20,7 @@ export function SettingsPage() {
   const lookups = useLookups()
   const createAccount = useCreateAccount()
   const { theme, setTheme } = useTheme()
+  const { fullWidth, setFullWidth } = useFullWidth()
 
   const [name, setName] = useState('')
   const [institution, setInstitution] = useState('')
@@ -66,19 +69,38 @@ export function SettingsPage() {
         <CardHeader>
           <CardTitle>Appearance</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-1.5">
-          <Label htmlFor="theme">Theme</Label>
-          <Select
-            id="theme"
-            value={theme}
-            onChange={(e) => setTheme(e.target.value as ThemeId)}
-          >
-            {THEMES.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.label} — {t.description}
-              </option>
-            ))}
-          </Select>
+        <CardContent className="space-y-4">
+          <div className="grid gap-1.5">
+            <Label htmlFor="theme">Theme</Label>
+            <Select
+              id="theme"
+              value={theme}
+              onChange={(e) => setTheme(e.target.value as ThemeId)}
+            >
+              {THEMES.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label} — {t.description}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p id="full-width-label" className="text-sm font-medium">
+                Full-width layout
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Use the whole screen on desktop — accounts spread across columns. No effect on
+                mobile.
+              </p>
+            </div>
+            <Switch
+              checked={fullWidth}
+              onCheckedChange={setFullWidth}
+              aria-labelledby="full-width-label"
+            />
+          </div>
         </CardContent>
       </Card>
 
