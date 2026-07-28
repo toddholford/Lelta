@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { BalanceTracker } from '@/components/overview/balance-tracker'
-import { MonthlyPayments } from '@/components/overview/monthly-payments'
+import { RecurringPayments } from '@/components/overview/recurring-payments'
 import { CalendarView } from '@/components/overview/calendar-view'
 
 type OverviewTab = 'balance' | 'payments' | 'calendar'
 
 const subTabs: { id: OverviewTab; label: string }[] = [
   { id: 'balance', label: 'Balance Tracker' },
-  { id: 'payments', label: 'Monthly Payments' },
+  { id: 'payments', label: 'Recurring Payments' },
   { id: 'calendar', label: 'Calendar' },
 ]
 
@@ -41,7 +41,7 @@ export function OverviewPage() {
       </div>
 
       {tab === 'balance' && <BalanceTracker />}
-      {tab === 'payments' && <MonthlyPayments />}
+      {tab === 'payments' && <RecurringPayments />}
       {tab === 'calendar' && <CalendarView />}
     </div>
   )

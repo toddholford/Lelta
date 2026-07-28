@@ -38,6 +38,7 @@ export const demoLookups: Lookups = {
     { id: 1, name: 'weekly' },
     { id: 2, name: 'monthly' },
     { id: 3, name: 'yearly' },
+    { id: 4, name: 'biweekly' },
   ],
   accountTypes: [
     { id: 1, name: 'billing' },
@@ -114,6 +115,12 @@ export const demoTransactions: Transaction[] = [
   txn({ account_id: 'acct-firstmid', transaction_type_id: 3, transaction_category_id: 9, source_name: 'AutoZone', txn_date: iso(9), amount_cents: 4599 }),
   txn({ account_id: 'acct-firstmid', transaction_type_id: 3, transaction_category_id: 6, source_name: 'Aldi', txn_date: iso(10), amount_cents: 6221 }),
   txn({ account_id: 'acct-regions', transaction_type_id: 1, transaction_category_id: 4, source_name: 'City Water', txn_date: iso(12), amount_cents: 5830, transaction_frequency_id: 2 }),
+  // Recurring at other cadences — surface under Overview → Recurring Payments
+  // (weekly / biweekly / monthly / yearly sub-tabs). Each is anchored this
+  // month so its projection is visible on first load.
+  txn({ account_id: 'acct-regions', transaction_type_id: 1, transaction_category_id: 4, source_name: 'Trash Pickup', txn_date: iso(21), amount_cents: 1200, transaction_frequency_id: 1 }),
+  txn({ account_id: 'acct-firstmid', transaction_type_id: 1, transaction_category_id: 5, source_name: 'Anytime Fitness', txn_date: iso(20), amount_cents: 2499, transaction_frequency_id: 4 }),
+  txn({ account_id: 'acct-regions', transaction_type_id: 1, transaction_category_id: 5, source_name: 'Amazon Prime', txn_date: iso(15), amount_cents: 13900, transaction_frequency_id: 3 }),
   // Credit-card spending (Chase Visa) — shows under the ledger's Credit view.
   txn({ account_id: 'acct-chase-visa', transaction_type_id: 3, transaction_category_id: 8, source_name: 'Olive Garden', txn_date: iso(2), amount_cents: 5240 }),
   txn({ account_id: 'acct-chase-visa', transaction_type_id: 3, transaction_category_id: 7, source_name: 'Amazon', txn_date: iso(5), amount_cents: 3199 }),

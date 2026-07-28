@@ -47,6 +47,29 @@ export function useTransactions(filter: LedgerFilter) {
   })
 }
 
+// Every transaction carrying a frequency, across all months — the anchor rows
+// the Recurring Payments view projects forward. Not month-scoped: a series
+// anchored in a past month still lands in the month being viewed.
+async function fetchRecurringTransactions(): Promise<Transaction[]> {
+  if (!supabase) {
+    return demoTransactions.filter((t) => t.transaction_frequency_id != null)
+  }
+  const { data, error } = await supabase
+    .from('transaction')
+    .select('*')
+    .not('transaction_frequency_id', 'is', null)
+    .order('txn_date', { ascending: true })
+  if (error) throw error
+  return data
+}
+
+export function useRecurringTransactions() {
+  return useQuery({
+    queryKey: ['recurring-transactions'],
+    queryFn: fetchRecurringTransactions,
+  })
+}
+
 export function useCreateTransaction() {
   const queryClient = useQueryClient()
   const { data: profile } = useProfile()
@@ -71,7 +94,10 @@ export function useCreateTransaction() {
       })
       if (error) throw error
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['transactions'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['recurring-transactions'] })
+    },
   })
 }
 
@@ -87,7 +113,10 @@ export function useUpdateTransaction() {
       const { error } = await supabase.from('transaction').update(input).eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['transactions'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['recurring-transactions'] })
+    },
   })
 }
 
@@ -103,6 +132,9 @@ export function useDeleteTransaction() {
       const { error } = await supabase.from('transaction').delete().eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['transactions'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['recurring-transactions'] })
+    },
   })
 }
