@@ -50,6 +50,17 @@ export function TransactionForm({
     [lookups.categories, typeId],
   )
 
+  // Frequencies come from the DB in id order (biweekly was added last), so
+  // sort them into shortest→longest cadence for the dropdown.
+  const frequencyOptions = useMemo(() => {
+    const order = ['weekly', 'biweekly', 'monthly', 'yearly']
+    const rank = (name: string) => {
+      const i = order.indexOf(name)
+      return i === -1 ? order.length : i
+    }
+    return [...lookups.frequencies].sort((a, b) => rank(a.name) - rank(b.name))
+  }, [lookups.frequencies])
+
   // Keep category valid when the type changes.
   useEffect(() => {
     if (categoryId === '' || !categoryOptions.some((c) => c.id === categoryId)) {
@@ -155,7 +166,7 @@ export function TransactionForm({
               }
             >
               <option value="">one-off</option>
-              {lookups.frequencies.map((f) => (
+              {frequencyOptions.map((f) => (
                 <option key={f.id} value={f.id}>{f.name}</option>
               ))}
             </Select>
