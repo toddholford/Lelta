@@ -144,8 +144,6 @@ export function ImportPage() {
 
   return (
     <div className="space-y-4 p-4 md:p-6">
-      <h1 className="text-lg font-semibold">Import</h1>
-
       <Card>
         <CardHeader>
           <CardTitle>Upload a statement</CardTitle>

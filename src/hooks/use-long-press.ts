@@ -2,6 +2,11 @@ import * as React from 'react'
 
 export const LONG_PRESS_MS = 450
 const MOVE_CANCEL_PX = 10
+// Grace period before the fill appears, so a thumb briefly touching a row while
+// scrolling doesn't flicker the animation. A scroll moves/lifts before this
+// elapses; a real hold passes it. The fill then sweeps over the remaining time.
+const FILL_DELAY_MS = 120
+const FILL_MS = LONG_PRESS_MS - FILL_DELAY_MS
 
 export interface LongPressHandlers {
   onPointerDown?: (e: React.PointerEvent) => void
@@ -27,25 +32,30 @@ export function useLongPress(onLongPress?: () => void): {
   pressing: boolean
   durationMs: number
 } {
-  const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  const fireTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  const fillTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const start = React.useRef<{ x: number; y: number } | null>(null)
   const fired = React.useRef(false)
   const [pressing, setPressing] = React.useState(false)
 
-  const clearTimer = React.useCallback(() => {
-    if (timer.current !== null) {
-      clearTimeout(timer.current)
-      timer.current = null
+  const clearTimers = React.useCallback(() => {
+    if (fireTimer.current !== null) {
+      clearTimeout(fireTimer.current)
+      fireTimer.current = null
+    }
+    if (fillTimer.current !== null) {
+      clearTimeout(fillTimer.current)
+      fillTimer.current = null
     }
   }, [])
 
   const endPress = React.useCallback(() => {
-    clearTimer()
+    clearTimers()
     setPressing(false)
-  }, [clearTimer])
+  }, [clearTimers])
 
   // Never leave a timer running past unmount.
-  React.useEffect(() => clearTimer, [clearTimer])
+  React.useEffect(() => clearTimers, [clearTimers])
 
   const consumeClick = React.useCallback(() => {
     if (fired.current) {
@@ -56,16 +66,17 @@ export function useLongPress(onLongPress?: () => void): {
   }, [])
 
   if (!onLongPress) {
-    return { handlers: {}, consumeClick, pressing: false, durationMs: LONG_PRESS_MS }
+    return { handlers: {}, consumeClick, pressing: false, durationMs: FILL_MS }
   }
 
   const handlers: LongPressHandlers = {
     onPointerDown: (e) => {
       start.current = { x: e.clientX, y: e.clientY }
       fired.current = false
-      clearTimer()
-      setPressing(true)
-      timer.current = setTimeout(() => {
+      clearTimers()
+      // Hold briefly before the fill shows — scrolling cancels it first.
+      fillTimer.current = setTimeout(() => setPressing(true), FILL_DELAY_MS)
+      fireTimer.current = setTimeout(() => {
         fired.current = true
         setPressing(false)
         onLongPress()
@@ -87,5 +98,5 @@ export function useLongPress(onLongPress?: () => void): {
     onContextMenu: (e) => e.preventDefault(),
   }
 
-  return { handlers, consumeClick, pressing, durationMs: LONG_PRESS_MS }
+  return { handlers, consumeClick, pressing, durationMs: FILL_MS }
 }

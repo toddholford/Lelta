@@ -17,10 +17,6 @@ export function OverviewPage() {
 
   return (
     <div className="space-y-4 p-4 md:p-6">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-lg font-semibold">Overview</h1>
-      </div>
-
       {/* Sub-tab segmented control */}
       <div className="flex gap-1 overflow-x-auto rounded-lg bg-muted p-1">
         {subTabs.map((opt) => (
