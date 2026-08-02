@@ -138,3 +138,26 @@ export function useDeleteTransaction() {
     },
   })
 }
+
+/** Delete several transactions in one round-trip — backs multi-select delete. */
+export function useDeleteTransactions() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      if (ids.length === 0) return
+      if (!supabase) {
+        const remove = new Set(ids)
+        for (let i = demoTransactions.length - 1; i >= 0; i--) {
+          if (remove.has(demoTransactions[i].id)) demoTransactions.splice(i, 1)
+        }
+        return
+      }
+      const { error } = await supabase.from('transaction').delete().in('id', ids)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['recurring-transactions'] })
+    },
+  })
+}

@@ -6,10 +6,10 @@ import { CalendarView } from '@/components/overview/calendar-view'
 
 type OverviewTab = 'balance' | 'payments' | 'calendar'
 
-const subTabs: { id: OverviewTab; label: string }[] = [
-  { id: 'balance', label: 'Balance Tracker' },
-  { id: 'payments', label: 'Recurring Payments' },
-  { id: 'calendar', label: 'Calendar' },
+const subTabs: { id: OverviewTab; label: string; shortLabel: string }[] = [
+  { id: 'balance', label: 'Balance Tracker', shortLabel: 'Balance' },
+  { id: 'payments', label: 'Recurring Payments', shortLabel: 'Recurring' },
+  { id: 'calendar', label: 'Calendar', shortLabel: 'Calendar' },
 ]
 
 export function OverviewPage() {
@@ -22,7 +22,7 @@ export function OverviewPage() {
       </div>
 
       {/* Sub-tab segmented control */}
-      <div className="flex gap-1 rounded-lg bg-muted p-1">
+      <div className="flex gap-1 overflow-x-auto rounded-lg bg-muted p-1">
         {subTabs.map((opt) => (
           <button
             key={opt.id}
@@ -35,7 +35,8 @@ export function OverviewPage() {
                 : 'text-muted-foreground hover:text-foreground',
             )}
           >
-            {opt.label}
+            <span className="sm:hidden">{opt.shortLabel}</span>
+            <span className="hidden sm:inline">{opt.label}</span>
           </button>
         ))}
       </div>

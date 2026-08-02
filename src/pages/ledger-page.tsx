@@ -6,13 +6,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { MonthSelector } from '@/components/ledger/month-selector'
 import { LedgerViewToggle, type LedgerView } from '@/components/ledger/ledger-view-toggle'
 import { AccountSwitcher } from '@/components/ledger/account-switcher'
+import { AccountColumn } from '@/components/ledger/account-column'
 import { StatTiles } from '@/components/ledger/stat-tiles'
-import { TransactionCard } from '@/components/ledger/transaction-card'
+import { SelectableTransactionList } from '@/components/ledger/selectable-transaction-list'
+import { MultiSelectHint } from '@/components/ui/multi-select-hint'
 import { TransactionForm } from '@/components/ledger/transaction-form'
 import { TransactionSheet } from '@/components/ledger/transaction-sheet'
 import { useAccounts } from '@/hooks/use-accounts'
 import { useLookups } from '@/hooks/use-lookups'
 import { useMonth } from '@/hooks/use-month'
+import { useFullWidth } from '@/hooks/use-full-width'
 import {
   useCreateTransaction,
   useDeleteTransaction,
@@ -23,6 +26,7 @@ import type { Transaction, TransactionInput } from '@/lib/types'
 
 export function LedgerPage() {
   const { year, month, setMonth } = useMonth()
+  const { fullWidth } = useFullWidth()
   const [view, setView] = useState<LedgerView>('cash')
   const [accountId, setAccountId] = useState<string | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -30,7 +34,9 @@ export function LedgerPage() {
 
   const lookups = useLookups()
   const accounts = useAccounts()
-  const transactions = useTransactions({ year, month, accountId })
+  // Full-width mode shows every account as its own column, so it always needs
+  // the whole month regardless of any previously selected account tab.
+  const transactions = useTransactions({ year, month, accountId: fullWidth ? null : accountId })
   const createTxn = useCreateTransaction()
   const updateTxn = useUpdateTransaction()
   const deleteTxn = useDeleteTransaction()
@@ -70,6 +76,17 @@ export function LedgerPage() {
       ),
     [transactions.data, creditAccountIds, view],
   )
+
+  // Group the visible transactions by account for the full-width column layout.
+  const txnsByAccount = useMemo(() => {
+    const map = new Map<string, Transaction[]>()
+    for (const t of visibleTransactions) {
+      const arr = map.get(t.account_id)
+      if (arr) arr.push(t)
+      else map.set(t.account_id, [t])
+    }
+    return map
+  }, [visibleTransactions])
 
   function handleViewChange(next: LedgerView) {
     setView(next)
@@ -138,11 +155,14 @@ export function LedgerPage() {
         <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top,0px))] z-30 space-y-3 bg-background/95 px-4 pb-3 pt-3 backdrop-blur md:static md:top-0 md:px-0 md:pt-0">
           <LedgerViewToggle value={view} onChange={handleViewChange} />
           <MonthSelector year={year} month={month} onChange={setMonth} />
-          <AccountSwitcher
-            accounts={viewAccounts}
-            selectedId={accountId}
-            onChange={setAccountId}
-          />
+          {/* Columns replace the account tabs in full-width mode. */}
+          {!fullWidth && (
+            <AccountSwitcher
+              accounts={viewAccounts}
+              selectedId={accountId}
+              onChange={setAccountId}
+            />
+          )}
         </div>
 
         <div className="space-y-4 px-4 pt-1 md:px-0">
@@ -154,24 +174,40 @@ export function LedgerPage() {
             </p>
           )}
 
+          {!loading && visibleTransactions.length > 0 && <MultiSelectHint />}
+
           {loading ? (
             <div className="space-y-2">
               {Array.from({ length: 5 }, (_, i) => (
                 <Skeleton key={i} className="h-16 w-full rounded-xl" />
               ))}
             </div>
-          ) : visibleTransactions.length > 0 && lookups.data ? (
-            <div className="space-y-2">
-              {visibleTransactions.map((t) => (
-                <TransactionCard
-                  key={t.id}
-                  transaction={t}
-                  lookups={lookups.data}
-                  accountName={accountId ? undefined : accountNameById.get(t.account_id)}
-                  onClick={() => openEdit(t)}
+          ) : fullWidth && lookups.data ? (
+            <div className="grid gap-3 md:grid-cols-[repeat(auto-fit,minmax(260px,1fr))]">
+              {viewAccounts.map((a) => (
+                <AccountColumn
+                  key={a.id}
+                  account={a}
+                  transactions={txnsByAccount.get(a.id) ?? []}
+                  lookups={lookups.data!}
+                  onOpen={openEdit}
                 />
               ))}
+              {viewAccounts.length === 0 && (
+                <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+                  {view === 'credit' ? 'No credit-card accounts yet.' : 'No cash accounts yet.'}
+                </div>
+              )}
             </div>
+          ) : visibleTransactions.length > 0 && lookups.data ? (
+            <SelectableTransactionList
+              transactions={visibleTransactions}
+              lookups={lookups.data}
+              onOpen={openEdit}
+              getAccountName={
+                accountId ? undefined : (t) => accountNameById.get(t.account_id)
+              }
+            />
           ) : (
             <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
               {view === 'credit'

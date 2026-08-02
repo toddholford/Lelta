@@ -1,7 +1,8 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { MonthSelector } from '@/components/ledger/month-selector'
+import { LedgerViewToggle, type LedgerView } from '@/components/ledger/ledger-view-toggle'
 import { AccountOverviewCard } from '@/components/overview/account-overview-card'
 import { useAccounts } from '@/hooks/use-accounts'
 import { useLookups } from '@/hooks/use-lookups'
@@ -16,6 +17,7 @@ import { incomeTypeIds } from '@/lib/txn'
 export function BalanceTracker() {
   const { year, month, setMonth } = useMonth()
   const { fullWidth } = useFullWidth()
+  const [view, setView] = useState<LedgerView>('cash')
 
   const accounts = useAccounts()
   const lookups = useLookups()
@@ -89,12 +91,13 @@ export function BalanceTracker() {
   // Full-width mode fans the account cards into columns (one per account) that
   // wrap when they run out of room; otherwise they stack in a single column.
   const accountListClass = fullWidth
-    ? 'grid gap-3 md:[grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]'
+    ? 'grid gap-3 md:grid-cols-[repeat(auto-fit,minmax(240px,1fr))]'
     : 'space-y-3'
 
   return (
     <div className="space-y-4">
       <MonthSelector year={year} month={month} onChange={setMonth} />
+      <LedgerViewToggle value={view} onChange={setView} />
 
       {loadError && (
         <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
@@ -108,7 +111,7 @@ export function BalanceTracker() {
           <Skeleton className="h-40 w-full rounded-xl" />
           <Skeleton className="h-40 w-full rounded-xl" />
         </div>
-      ) : (
+      ) : view === 'cash' ? (
         <>
           {/* Cash-on-hand hero */}
           <Card>
@@ -150,46 +153,48 @@ export function BalanceTracker() {
           </Card>
 
           {/* Cash accounts */}
-          <div className={accountListClass}>
-            {cashAccounts.map((a) => (
-              <AccountOverviewCard
-                key={a.id}
-                account={a}
-                startingCents={startingByAccount.get(a.id) ?? null}
-                spentCents={spentByAccount.get(a.id) ?? 0}
-                gainedCents={gainedByAccount.get(a.id) ?? 0}
-                entries={entriesByAccount.get(a.id) ?? 0}
-                isCredit={false}
-                saving={setBalance.isPending}
-                onSetStarting={(cents) => handleSetStarting(a.id, cents)}
-              />
-            ))}
-          </div>
-
-          {/* Credit cards */}
-          {creditAccounts.length > 0 && (
-            <div className="space-y-3">
-              <p className="pt-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                Credit cards
-              </p>
-              <div className={accountListClass}>
-              {creditAccounts.map((a) => (
+          {cashAccounts.length > 0 ? (
+            <div className={accountListClass}>
+              {cashAccounts.map((a) => (
                 <AccountOverviewCard
                   key={a.id}
                   account={a}
-                  startingCents={null}
+                  startingCents={startingByAccount.get(a.id) ?? null}
                   spentCents={spentByAccount.get(a.id) ?? 0}
                   gainedCents={gainedByAccount.get(a.id) ?? 0}
                   entries={entriesByAccount.get(a.id) ?? 0}
-                  isCredit
-                  saving={false}
-                  onSetStarting={() => {}}
+                  isCredit={false}
+                  saving={setBalance.isPending}
+                  onSetStarting={(cents) => handleSetStarting(a.id, cents)}
                 />
               ))}
-              </div>
             </div>
+          ) : (
+            <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+              No cash accounts yet.
+            </p>
           )}
         </>
+      ) : creditAccounts.length > 0 ? (
+        <div className={accountListClass}>
+          {creditAccounts.map((a) => (
+            <AccountOverviewCard
+              key={a.id}
+              account={a}
+              startingCents={null}
+              spentCents={spentByAccount.get(a.id) ?? 0}
+              gainedCents={gainedByAccount.get(a.id) ?? 0}
+              entries={entriesByAccount.get(a.id) ?? 0}
+              isCredit
+              saving={false}
+              onSetStarting={() => {}}
+            />
+          ))}
+        </div>
+      ) : (
+        <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+          No credit-card accounts yet.
+        </p>
       )}
     </div>
   )

@@ -11,7 +11,10 @@ import { incomeTypeIds } from '@/lib/txn'
 import { cn } from '@/lib/utils'
 import type { Lookups, Transaction } from '@/lib/types'
 
-const FREQ_TABS: { id: RecurringFrequency; label: string }[] = [
+type RecurringTab = 'all' | RecurringFrequency
+
+const FREQ_TABS: { id: RecurringTab; label: string }[] = [
+  { id: 'all', label: 'All' },
   { id: 'weekly', label: 'Weekly' },
   { id: 'biweekly', label: 'Biweekly' },
   { id: 'monthly', label: 'Monthly' },
@@ -42,7 +45,7 @@ export function RecurringPayments() {
   const { year, month, setMonth } = useMonth()
   const lookups = useLookups()
   const recurring = useRecurringTransactions()
-  const [freq, setFreq] = useState<RecurringFrequency>('monthly')
+  const [freq, setFreq] = useState<RecurringTab>('all')
 
   const income = useMemo(
     () => incomeTypeIds({ types: lookups.data?.types ?? [] }),
@@ -85,7 +88,20 @@ export function RecurringPayments() {
     return buckets
   }, [recurring.data, lookups.data, year, month])
 
-  const active = byFreq[freq]
+  // 'All' merges every frequency bucket into one day-sorted list; a specific
+  // tab shows just its bucket. tabCount powers the per-tab count badge.
+  const active = useMemo(() => {
+    if (freq !== 'all') return byFreq[freq]
+    return [...byFreq.weekly, ...byFreq.biweekly, ...byFreq.monthly, ...byFreq.yearly].sort(
+      (a, b) => a.day - b.day,
+    )
+  }, [byFreq, freq])
+
+  const tabCount = (id: RecurringTab) =>
+    id === 'all'
+      ? byFreq.weekly.length + byFreq.biweekly.length + byFreq.monthly.length + byFreq.yearly.length
+      : byFreq[id].length
+
   const monthTotal = useMemo(() => {
     let net = 0
     for (const o of active) {
@@ -122,9 +138,9 @@ export function RecurringPayments() {
             )}
           >
             {opt.label}
-            {byFreq[opt.id].length > 0 && (
+            {tabCount(opt.id) > 0 && (
               <span className="ml-1 tabular-nums opacity-60">
-                {byFreq[opt.id].length}
+                {tabCount(opt.id)}
               </span>
             )}
           </button>
@@ -135,7 +151,7 @@ export function RecurringPayments() {
         <Skeleton className="h-64 w-full rounded-xl" />
       ) : active.length === 0 ? (
         <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-          No {freq} recurring payments in {MONTH_NAMES[month]}.
+          No {freq === 'all' ? '' : `${freq} `}recurring payments in {MONTH_NAMES[month]}.
         </p>
       ) : (
         <div className="space-y-2">

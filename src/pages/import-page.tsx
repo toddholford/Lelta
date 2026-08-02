@@ -1,21 +1,31 @@
-import { useState, type ChangeEvent } from 'react'
+import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { ChevronRight, FileUp, Loader2, Upload, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { AlertDialog } from '@/components/ui/alert-dialog'
+import { SelectionActionBar } from '@/components/ui/selection-action-bar'
+import { SelectionCheckbox } from '@/components/ui/selection-checkbox'
+import { HoldProgressFill } from '@/components/ui/hold-progress-fill'
+import { MultiSelectHint } from '@/components/ui/multi-select-hint'
 import { ImportReview } from '@/components/import/import-review'
 import { supabase } from '@/lib/supabase'
 import { useAccounts } from '@/hooks/use-accounts'
 import { useProfile } from '@/hooks/use-auth'
+import { useLongPress } from '@/hooks/use-long-press'
+import { useMultiSelect } from '@/hooks/use-multi-select'
+import { dismissHint } from '@/lib/multi-select-hint'
 import {
   useDeleteImport,
+  useDeleteImports,
   useParseStatement,
   useStatementImports,
   type StatementImportSummary,
 } from '@/hooks/use-import'
 import { formatShortDate } from '@/lib/format'
+import { cn } from '@/lib/utils'
 
 // Each account maps to a known statement format so the user only has to pick
 // the account — the parser format is resolved in the background. Institutions
@@ -55,6 +65,7 @@ export function ImportPage() {
   const imports = useStatementImports()
   const parse = useParseStatement()
   const discard = useDeleteImport()
+  const discardMany = useDeleteImports()
   const [accountId, setAccountId] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [status, setStatus] = useState<'idle' | 'uploading' | 'parsing' | 'error'>('idle')
@@ -207,6 +218,8 @@ export function ImportPage() {
         retryingId={parse.isPending ? (parse.variables ?? null) : null}
         onDiscard={(id, filePath) => discard.mutate({ id, filePath })}
         discardingId={discard.isPending ? (discard.variables?.id ?? null) : null}
+        onDeleteMany={(items) => discardMany.mutateAsync(items)}
+        deletingMany={discardMany.isPending}
       />
     </div>
   )
@@ -221,6 +234,8 @@ interface RecentImportsProps {
   retryingId: string | null
   onDiscard: (id: string, filePath: string) => void
   discardingId: string | null
+  onDeleteMany: (items: { id: string; filePath: string }[]) => Promise<void>
+  deletingMany: boolean
 }
 
 function RecentImports({
@@ -232,7 +247,30 @@ function RecentImports({
   retryingId,
   onDiscard,
   discardingId,
+  onDeleteMany,
+  deletingMany,
 }: RecentImportsProps) {
+  const ids = useMemo(() => (imports ?? []).map((i) => i.id), [imports])
+  const sel = useMultiSelect(ids)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
+  // Discovering the gesture retires the one-time hint everywhere.
+  useEffect(() => {
+    if (sel.active) dismissHint()
+  }, [sel.active])
+
+  function handleConfirmDelete() {
+    const items = (imports ?? [])
+      .filter((i) => sel.isSelected(i.id))
+      .map((i) => ({ id: i.id, filePath: i.file_path }))
+    onDeleteMany(items)
+      .then(() => {
+        setConfirmOpen(false)
+        sel.exit()
+      })
+      .catch(() => setConfirmOpen(false))
+  }
+
   if (loading) {
     return (
       <div className="space-y-2">
@@ -243,71 +281,158 @@ function RecentImports({
   }
   if (!imports?.length) return null
 
+  const count = sel.selectedIds.length
+
   return (
     <div className="space-y-2">
       <h2 className="text-sm font-medium text-muted-foreground">Recent imports</h2>
-      {imports.map((imp) => {
-        const working = imp.status === 'pending' || imp.status === 'parsing'
-        const failed = imp.status === 'failed'
-        const discardButton = (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-muted-foreground hover:text-destructive"
-            aria-label="Discard this import"
-            onClick={() => onDiscard(imp.id, imp.file_path)}
-            disabled={discardingId === imp.id}
-          >
-            {discardingId === imp.id ? <Loader2 className="animate-spin" /> : <X />}
-          </Button>
-        )
-        return (
-          <Card key={imp.id}>
-            <CardContent className="flex items-center gap-3 p-3">
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">
-                  {accountName(imp.account_id) ?? imp.bank_format}
-                </p>
-                <p className={`text-xs ${failed ? 'text-destructive' : 'text-muted-foreground'}`}>
-                  {formatShortDate(imp.created_at.slice(0, 10))} ·{' '}
-                  {working ? (
-                    <span className="inline-flex items-center gap-1">
-                      <Loader2 className="size-3 animate-spin" /> parsing…
-                    </span>
-                  ) : failed ? (
-                    <>Parse failed{imp.error ? ` · ${imp.error}` : ''}</>
-                  ) : (
-                    <>
-                      {STATUS_LABEL[imp.status] ?? imp.status}
-                      {imp.total > 0 && ` · ${imp.pending} of ${imp.total} to review`}
-                    </>
-                  )}
-                </p>
-              </div>
-              {working ? (
-                discardButton
-              ) : failed ? (
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onRetryParse(imp.id)}
-                    disabled={retryingId === imp.id || discardingId === imp.id}
-                  >
-                    {retryingId === imp.id ? <Loader2 className="animate-spin" /> : 'Retry parse'}
-                  </Button>
-                  {discardButton}
-                </div>
-              ) : (
-                <Button variant="ghost" size="sm" onClick={() => onReview(imp.id)}>
-                  {imp.pending > 0 ? 'Review' : 'View'}
-                  <ChevronRight />
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        )
-      })}
+
+      {!sel.active && <MultiSelectHint />}
+
+      {sel.active && (
+        <SelectionActionBar
+          count={count}
+          allSelected={sel.allSelected}
+          onToggleAll={sel.toggleAll}
+          onDelete={() => setConfirmOpen(true)}
+          onCancel={sel.exit}
+        />
+      )}
+
+      {imports.map((imp) => (
+        <RecentImportRow
+          key={imp.id}
+          imp={imp}
+          accountName={accountName}
+          selectionMode={sel.active}
+          selected={sel.isSelected(imp.id)}
+          onToggle={sel.toggle}
+          onEnterSelection={sel.enter}
+          onReview={onReview}
+          onRetryParse={onRetryParse}
+          retrying={retryingId === imp.id}
+          onDiscard={onDiscard}
+          discarding={discardingId === imp.id}
+        />
+      ))}
+
+      <AlertDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={`Delete ${count} ${count === 1 ? 'import' : 'imports'}?`}
+        description="Removes the uploaded files and their parsed rows. Committed transactions stay in the ledger."
+        confirmLabel="Delete"
+        destructive
+        pending={deletingMany}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
+  )
+}
+
+interface RecentImportRowProps {
+  imp: StatementImportSummary
+  accountName: (id: string) => string | undefined
+  selectionMode: boolean
+  selected: boolean
+  onToggle: (id: string) => void
+  onEnterSelection: (id: string) => void
+  onReview: (id: string) => void
+  onRetryParse: (id: string) => void
+  retrying: boolean
+  onDiscard: (id: string, filePath: string) => void
+  discarding: boolean
+}
+
+function RecentImportRow({
+  imp,
+  accountName,
+  selectionMode,
+  selected,
+  onToggle,
+  onEnterSelection,
+  onReview,
+  onRetryParse,
+  retrying,
+  onDiscard,
+  discarding,
+}: RecentImportRowProps) {
+  const working = imp.status === 'pending' || imp.status === 'parsing'
+  const failed = imp.status === 'failed'
+  // Long-press the info region to enter selection; disabled once in mode
+  // (a plain tap toggles then).
+  const { handlers, pressing, durationMs } = useLongPress(
+    selectionMode ? undefined : () => onEnterSelection(imp.id),
+  )
+
+  const discardButton = (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="text-muted-foreground hover:text-destructive"
+      aria-label="Discard this import"
+      onClick={() => onDiscard(imp.id, imp.file_path)}
+      disabled={discarding}
+    >
+      {discarding ? <Loader2 className="animate-spin" /> : <X />}
+    </Button>
+  )
+
+  return (
+    <Card className={cn(selectionMode && selected && 'border-primary ring-1 ring-primary')}>
+      <CardContent
+        className={cn(
+          'relative flex items-center gap-3 p-3',
+          selectionMode && 'cursor-pointer select-none',
+        )}
+        onClick={selectionMode ? () => onToggle(imp.id) : undefined}
+        role={selectionMode ? 'button' : undefined}
+        aria-pressed={selectionMode ? selected : undefined}
+      >
+        <HoldProgressFill active={pressing} durationMs={durationMs} />
+        {selectionMode && <SelectionCheckbox checked={selected} />}
+        <div className="min-w-0 flex-1" {...handlers}>
+          <p className="truncate text-sm font-medium">
+            {accountName(imp.account_id) ?? imp.bank_format}
+          </p>
+          <p className={`text-xs ${failed ? 'text-destructive' : 'text-muted-foreground'}`}>
+            {formatShortDate(imp.created_at.slice(0, 10))} ·{' '}
+            {working ? (
+              <span className="inline-flex items-center gap-1">
+                <Loader2 className="size-3 animate-spin" /> parsing…
+              </span>
+            ) : failed ? (
+              <>Parse failed{imp.error ? ` · ${imp.error}` : ''}</>
+            ) : (
+              <>
+                {STATUS_LABEL[imp.status] ?? imp.status}
+                {imp.total > 0 && ` · ${imp.pending} of ${imp.total} to review`}
+              </>
+            )}
+          </p>
+        </div>
+        {!selectionMode &&
+          (working ? (
+            discardButton
+          ) : failed ? (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onRetryParse(imp.id)}
+                disabled={retrying || discarding}
+              >
+                {retrying ? <Loader2 className="animate-spin" /> : 'Retry parse'}
+              </Button>
+              {discardButton}
+            </div>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={() => onReview(imp.id)}>
+              {imp.pending > 0 ? 'Review' : 'View'}
+              <ChevronRight />
+            </Button>
+          ))}
+      </CardContent>
+    </Card>
   )
 }

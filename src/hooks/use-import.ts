@@ -117,6 +117,32 @@ export function useDeleteImport() {
   })
 }
 
+/**
+ * Discard several imports at once — backs multi-select delete in the imports
+ * list. Removes the uploaded files in one call, then deletes the rows (their
+ * import_row children cascade). Committed ledger transactions are unaffected.
+ */
+export function useDeleteImports() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (items: { id: string; filePath: string }[]) => {
+      if (items.length === 0) return
+      if (!supabase) throw new Error('Connect Supabase to manage imports.')
+      const paths = items.map((i) => i.filePath).filter(Boolean)
+      if (paths.length) await supabase.storage.from('statements').remove(paths)
+      const { error } = await supabase
+        .from('statement_import')
+        .delete()
+        .in(
+          'id',
+          items.map((i) => i.id),
+        )
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['statement-imports'] }),
+  })
+}
+
 /** Edit the parsed fields of a single pending row (before commit). */
 export function useUpdateImportRow() {
   const queryClient = useQueryClient()
