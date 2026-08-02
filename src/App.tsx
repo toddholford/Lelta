@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AppShell } from '@/components/layout/app-shell'
+import { InstallBanner } from '@/components/pwa/install-banner'
 import { FullWidthProvider } from '@/hooks/use-full-width'
 import { IconStyleProvider } from '@/hooks/use-icon-style'
 import { GuidanceProvider } from '@/hooks/use-guidance'
@@ -48,6 +49,7 @@ export default function App() {
         <IconStyleProvider>
           <GuidanceProvider>
             <BrowserRouter>
+              <InstallBanner />
               <Gate />
             </BrowserRouter>
           </GuidanceProvider>
