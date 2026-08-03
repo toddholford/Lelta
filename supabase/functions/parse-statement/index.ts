@@ -4,7 +4,8 @@
 // Flow (spec §5):
 //   1. Load the statement_import row + file from Storage (service role).
 //   2. Extract text from the PDF (or pass CSV through).
-//   3. Call the Anthropic API with a per-bank prompt selected by bank_format.
+//   3. Call the Anthropic API. The shared SYSTEM_PROMPT does the extraction;
+//      the account's institution name is passed only as a light provenance hint.
 //   4. Insert parsed rows into import_row with status 'pending'.
 //      Nothing is ever auto-committed — the client review screen does that.
 //
@@ -20,15 +21,6 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import Anthropic from 'npm:@anthropic-ai/sdk'
-
-const BANK_PROMPTS: Record<string, string> = {
-  regions_pdf:
-    'This is a Regions Bank checking statement. Extract every transaction line.',
-  capitalone_pdf:
-    'This is a Capital One 360 statement. Extract every transaction line.',
-  firstmid_csv:
-    'This is a FirstMid CSV export. Extract every transaction row.',
-}
 
 // Base64-encode bytes in chunks. Spreading a whole statement's bytes into
 // String.fromCharCode(...bytes) overflows the call stack on real PDFs, so we
@@ -128,7 +120,18 @@ Deno.serve(async (req) => {
     }
 
     const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY')! })
-    const bankPrompt = BANK_PROMPTS[imp.bank_format] ?? 'Extract every transaction line.'
+
+    // Claude reads the statement itself; the institution name is only a light
+    // provenance hint. Look it up from the account (best-effort — a missing or
+    // deleted account just falls back to the generic instruction).
+    const { data: account } = await supabase
+      .from('account')
+      .select('institution')
+      .eq('id', imp.account_id)
+      .maybeSingle()
+    const bankPrompt = account?.institution
+      ? `This is a ${account.institution} statement. Extract every transaction line.`
+      : 'Extract every transaction line.'
 
     // PDFs go to the API as a document block (Claude reads PDFs natively);
     // CSV/OFX go as plain text.

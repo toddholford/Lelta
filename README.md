@@ -41,8 +41,9 @@ exists.
 ## Statement import (Edge Function)
 
 `supabase/functions/parse-statement` parses an uploaded statement with the
-Anthropic API (per-bank prompt chosen by `bank_format`) and writes pending
-`import_row` records. Nothing is ever auto-committed — rows are reviewed,
+Anthropic API and writes pending `import_row` records. A shared system prompt
+does the extraction; the account's institution name is passed only as a light
+provenance hint. Nothing is ever auto-committed — rows are reviewed,
 edited, accepted, or rejected in the app before they touch the ledger.
 
 ```sh

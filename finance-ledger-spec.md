@@ -88,7 +88,7 @@ Regions and Capital One are **PDF-only**, so LLM extraction is the primary path.
 
 Flow:
 1. User uploads a statement file on the Import screen; it's stored in Supabase Storage.
-2. A Supabase **Edge Function** extracts text from the PDF, then calls the **Anthropic API** with a **per-bank prompt** (selected by `bank_format`) instructing it to return structured JSON matching the ledger schema (source, date, amount, best-guess category).
+2. A Supabase **Edge Function** extracts text from the PDF, then calls the **Anthropic API** with a **shared system prompt** instructing it to return structured JSON matching the ledger schema (source, date, amount, best-guess category). The account's institution name is passed only as a light provenance hint — extraction is not bank-specific.
 3. Parsed rows land in `import_row` (status `pending`) — nothing touches the real ledger yet.
 4. The Import review screen shows the parsed rows; the user edits, accepts, or rejects each one.
 5. Accepted rows are written into `transaction`, with `import_row.committed_transaction_id` back-referencing the created entry.
